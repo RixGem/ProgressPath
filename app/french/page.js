@@ -206,17 +206,17 @@ export default function FrenchPage() {
 
   function getMoodColor(mood) {
     switch(mood) {
-      case 'good': return 'text-green-600'
-      case 'neutral': return 'text-yellow-600'
-      case 'difficult': return 'text-red-600'
-      default: return 'text-gray-600'
+      case 'good': return 'text-green-600 dark:text-green-400'
+      case 'neutral': return 'text-yellow-600 dark:text-yellow-400'
+      case 'difficult': return 'text-red-600 dark:text-red-400'
+      default: return 'text-gray-600 dark:text-gray-400'
     }
   }
 
   const stats = calculateStats()
 
   if (loading) {
-    return <div className="text-center py-12">Loading...</div>
+    return <div className="text-center py-12 text-gray-600 dark:text-gray-400">Loading...</div>
   }
 
   return (
@@ -224,8 +224,8 @@ export default function FrenchPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">French Learning</h1>
-          <p className="text-gray-600 mt-2">Track your daily learning activities and progress</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">French Learning</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Track your daily learning activities and progress</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
@@ -241,40 +241,40 @@ export default function FrenchPage() {
         <div className="card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-gray-600">Total Hours</div>
-              <div className="text-3xl font-bold text-purple-600">{stats.totalHours}h</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">Total Hours</div>
+              <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{stats.totalHours}h</div>
             </div>
-            <TrendingUp className="w-8 h-8 text-purple-400" />
+            <TrendingUp className="w-8 h-8 text-purple-400 dark:text-purple-500" />
           </div>
         </div>
         
         <div className="card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-gray-600">Current Streak</div>
-              <div className="text-3xl font-bold text-orange-600">{stats.currentStreak} days</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">Current Streak</div>
+              <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{stats.currentStreak} days</div>
             </div>
-            <Flame className="w-8 h-8 text-orange-400" />
+            <Flame className="w-8 h-8 text-orange-400 dark:text-orange-500" />
           </div>
         </div>
         
         <div className="card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-gray-600">Total Sessions</div>
-              <div className="text-3xl font-bold text-primary-600">{stats.totalSessions}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">Total Sessions</div>
+              <div className="text-3xl font-bold text-primary-600 dark:text-primary-400">{stats.totalSessions}</div>
             </div>
-            <Calendar className="w-8 h-8 text-primary-400" />
+            <Calendar className="w-8 h-8 text-primary-400 dark:text-primary-500" />
           </div>
         </div>
         
         <div className="card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-gray-600">Vocabulary Words</div>
-              <div className="text-3xl font-bold text-green-600">{stats.totalVocabulary}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">Vocabulary Words</div>
+              <div className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.totalVocabulary}</div>
             </div>
-            <BookOpen className="w-8 h-8 text-green-400" />
+            <BookOpen className="w-8 h-8 text-green-400 dark:text-green-500" />
           </div>
         </div>
       </div>
@@ -282,7 +282,7 @@ export default function FrenchPage() {
       {/* Form */}
       {showForm && (
         <div className="card p-6">
-          <h2 className="text-xl font-semibold mb-4">Log Learning Activity</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Log Learning Activity</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <div>
@@ -350,7 +350,7 @@ export default function FrenchPage() {
                 value={formData.new_vocabulary}
                 onChange={(e) => setFormData({ ...formData, new_vocabulary: e.target.value })}
               />
-              <p className="text-xs text-gray-500 mt-1">Separate multiple words with commas</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Separate multiple words with commas</p>
             </div>
             
             <div>
@@ -362,7 +362,7 @@ export default function FrenchPage() {
                 value={formData.practice_sentences}
                 onChange={(e) => setFormData({ ...formData, practice_sentences: e.target.value })}
               />
-              <p className="text-xs text-gray-500 mt-1">Separate multiple sentences with commas</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Separate multiple sentences with commas</p>
             </div>
             
             <div>
@@ -386,15 +386,15 @@ export default function FrenchPage() {
 
       {/* Activities List */}
       <div className="card p-6">
-        <h2 className="text-xl font-semibold mb-4 flex items-center space-x-2">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
           <Calendar className="w-5 h-5" />
           <span>Recent Activities</span>
         </h2>
         {activities.length === 0 ? (
           <div className="text-center py-12">
-            <Languages className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No activities yet</h3>
-            <p className="text-gray-600 mb-4">Start logging your French learning activities</p>
+            <Languages className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No activities yet</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">Start logging your French learning activities</p>
             <button onClick={() => setShowForm(true)} className="btn-primary">
               Log Your First Activity
             </button>
@@ -408,17 +408,17 @@ export default function FrenchPage() {
                 : activity.duration_minutes
               
               return (
-                <div key={activity.id} className="border-l-4 border-purple-500 pl-4 py-3 bg-gray-50 rounded-r-lg">
+                <div key={activity.id} className="border-l-4 border-purple-500 dark:border-purple-400 pl-4 py-3 bg-gray-50 dark:bg-gray-700/50 rounded-r-lg">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
-                        <span className="font-semibold text-gray-900 capitalize">
+                        <span className="font-semibold text-gray-900 dark:text-white capitalize">
                           {activity.activity_type}
                         </span>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
                           {displayDuration} min
                         </span>
-                        <span className="text-sm text-gray-400">
+                        <span className="text-sm text-gray-400 dark:text-gray-500">
                           {new Date(activity.date).toLocaleDateString('en-US', { 
                             month: 'short', 
                             day: 'numeric', 
@@ -435,12 +435,12 @@ export default function FrenchPage() {
                       {activity.new_vocabulary && Array.isArray(activity.new_vocabulary) && activity.new_vocabulary.length > 0 && (
                         <div className="mb-2">
                           <div className="flex items-center space-x-2 mb-1">
-                            <BookOpen className="w-4 h-4 text-green-600" />
-                            <span className="text-sm font-medium text-gray-700">New Vocabulary ({activity.new_vocabulary.length}):</span>
+                            <BookOpen className="w-4 h-4 text-green-600 dark:text-green-400" />
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">New Vocabulary ({activity.new_vocabulary.length}):</span>
                           </div>
                           <div className="flex flex-wrap gap-2 ml-6">
                             {activity.new_vocabulary.map((word, idx) => (
-                              <span key={idx} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                              <span key={idx} className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs rounded-full">
                                 {word}
                               </span>
                             ))}
@@ -451,19 +451,19 @@ export default function FrenchPage() {
                       {activity.practice_sentences && Array.isArray(activity.practice_sentences) && activity.practice_sentences.length > 0 && (
                         <div className="mb-2">
                           <div className="flex items-center space-x-2 mb-1">
-                            <MessageSquare className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm font-medium text-gray-700">Practice Sentences:</span>
+                            <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Practice Sentences:</span>
                           </div>
                           <ul className="ml-6 space-y-1">
                             {activity.practice_sentences.map((sentence, idx) => (
-                              <li key={idx} className="text-sm text-gray-600 italic">• {sentence}</li>
+                              <li key={idx} className="text-sm text-gray-600 dark:text-gray-400 italic">• {sentence}</li>
                             ))}
                           </ul>
                         </div>
                       )}
                       
                       {activity.notes && (
-                        <p className="text-gray-600 text-sm mt-2">{activity.notes}</p>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">{activity.notes}</p>
                       )}
                     </div>
                   </div>
@@ -477,8 +477,8 @@ export default function FrenchPage() {
       {/* Learning Streak Visualization */}
       {activities.length > 0 && (
         <div className="card p-6">
-          <h2 className="text-xl font-semibold mb-4 flex items-center space-x-2">
-            <Flame className="w-5 h-5 text-orange-500" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
+            <Flame className="w-5 h-5 text-orange-500 dark:text-orange-400" />
             <span>7-Day Activity</span>
           </h2>
           <div className="grid grid-cols-7 gap-2">
@@ -497,16 +497,16 @@ export default function FrenchPage() {
                 <div key={i} className="text-center">
                   <div 
                     className={`h-20 rounded-lg flex items-center justify-center ${
-                      hasActivity ? 'bg-purple-500 text-white font-semibold' : 'bg-gray-200'
+                      hasActivity ? 'bg-purple-500 dark:bg-purple-600 text-white font-semibold' : 'bg-gray-200 dark:bg-gray-700'
                     }`}
                     title={hasActivity ? `${totalMinutes} minutes` : 'No activity'}
                   >
                     {hasActivity && <span className="text-sm">{totalMinutes}m</span>}
                   </div>
-                  <div className="text-xs text-gray-600 mt-1">
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                     {date.toLocaleDateString('en-US', { weekday: 'short' })}
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-gray-400 dark:text-gray-500">
                     {date.getDate()}
                   </div>
                 </div>
@@ -515,8 +515,8 @@ export default function FrenchPage() {
           </div>
           {stats.currentStreak > 0 && (
             <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">
-                Keep it up! You're on a <span className="font-bold text-orange-600">{stats.currentStreak}-day streak</span> 🔥
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Keep it up! You're on a <span className="font-bold text-orange-600 dark:text-orange-400">{stats.currentStreak}-day streak</span> 🔥
               </p>
             </div>
           )}
