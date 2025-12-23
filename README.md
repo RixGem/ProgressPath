@@ -1,6 +1,20 @@
 # ProgressPath - Learning Tracker
 
-A modern Next.js application to track your learning progress across books and languages with comprehensive analytics and streak tracking.
+A modern Next.js application to track your learning progress across books and languages with comprehensive analytics, streak tracking, dark mode, and daily inspirational quotes.
+
+## ✨ Latest Features
+
+### 🌙 Dark Mode
+- **One-Click Toggle**: Switch between light and dark themes with the sun/moon button in the navigation bar
+- **Persistent Preference**: Your theme choice is saved in localStorage
+- **Full Coverage**: All pages (Home, Books, French Learning) support dark mode
+- **Eye-Friendly**: Carefully selected color palette with excellent contrast ratios for comfortable nighttime reading
+
+### 💬 Daily Inspirational Quotes
+- **Rotating Quotes**: 18 curated inspirational quotes that change daily
+- **Categories**: Personal Growth, Learning, and Philosophy
+- **Elegant Design**: Italic styling with author attribution
+- **Motivation**: Start each day with a fresh dose of inspiration on the homepage
 
 ## Features
 
@@ -8,8 +22,11 @@ A modern Next.js application to track your learning progress across books and la
 - Add and manage your book collection
 - Track reading progress with visual progress bars
 - Categorize books by status (To Read, Reading, Completed)
+- Add genres, ratings (1-5 stars), and reading dates
+- Language analysis and personal notes
 - Edit and update book information
 - Monitor reading statistics
+- **Dark mode support** for comfortable reading
 
 ### 🇫🇷 French Learning Dashboard
 - **Activity Tracking**: Log daily learning activities with detailed information
@@ -21,20 +38,30 @@ A modern Next.js application to track your learning progress across books and la
 - **Time Management**: Automatic total hours calculation (proper minute-to-hour conversion)
 - **Visual Analytics**: 
   - Total Hours studied
-  - Current learning streak with flame icon
+  - Current learning streak with flame icon 🔥
   - Total sessions completed
   - Total vocabulary words learned
   - 7-day activity calendar showing daily minutes
 - **Comprehensive Activity Log**: View all past activities with vocabulary badges and sentence lists
 - **Session Notes**: Add detailed notes for each learning session
+- **Dark mode support** for late-night study sessions
+
+### 🏠 Homepage Experience
+- Personalized greeting: "Hey Chris! Ready to Level Up?"
+- **Daily rotating inspirational quote** (changes every day)
+- Quick access cards to Books and French Learning
+- Chris's Learning Principles section
+- **Dark mode** for a comfortable viewing experience
 
 ## Tech Stack
 
 - **Framework**: Next.js 14 (App Router)
-- **Styling**: TailwindCSS
+- **Styling**: TailwindCSS with dark mode support
 - **Database**: Supabase (PostgreSQL)
 - **Icons**: Lucide React
 - **Deployment**: Vercel
+- **State Management**: React Hooks
+- **Storage**: localStorage for theme preference
 
 ## Getting Started
 
@@ -73,10 +100,16 @@ CREATE TABLE books (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   title TEXT NOT NULL,
   author TEXT NOT NULL,
-  total_pages INTEGER NOT NULL,
-  current_page INTEGER DEFAULT 0,
+  progress DECIMAL(5,2) DEFAULT 0,
   status TEXT DEFAULT 'reading',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+  genre TEXT,
+  rating INTEGER,
+  language_analysis TEXT,
+  notes TEXT,
+  date_started DATE,
+  date_finished DATE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  date_updated TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
 -- Create french_learning table with all enhanced fields
@@ -105,29 +138,6 @@ CREATE POLICY "Enable all operations for french_learning" ON french_learning
   FOR ALL USING (true);
 ```
 
-### Database Schema Details
-
-#### french_learning Table Fields:
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `id` | UUID | Yes | Unique identifier (auto-generated) |
-| `activity_type` | TEXT | Yes | Type of activity (vocabulary, grammar, reading, listening, speaking, writing, exercise) |
-| `duration_minutes` | INTEGER | Yes | Session duration in minutes (backward compatibility) |
-| `total_time` | INTEGER | Yes | Total time in minutes (primary field for calculations) |
-| `notes` | TEXT | No | Optional notes about the session |
-| `date` | DATE | Yes | Date of the activity |
-| `new_vocabulary` | TEXT[] | No | Array of new vocabulary words learned |
-| `practice_sentences` | TEXT[] | No | Array of practice sentences |
-| `mood` | TEXT | No | Session difficulty/feeling (good/neutral/difficult) |
-| `created_at` | TIMESTAMP | Yes | Record creation timestamp (auto-generated) |
-
-**Important Notes**:
-- `total_time` is the primary field used for Total Hours calculation and automation
-- `new_vocabulary` and `practice_sentences` are stored as PostgreSQL arrays
-- `mood` has a CHECK constraint to ensure valid values
-- Array fields accept NULL values when no data is provided
-
 5. Run the development server:
 ```bash
 npm run dev
@@ -135,40 +145,37 @@ npm run dev
 
 6. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Database Migration
+## Usage Guide
 
-If you have an existing `french_learning` table, you'll need to migrate it to add the new fields:
+### Using Dark Mode
+1. Click the **sun/moon icon** in the top-right navigation bar
+2. The theme will switch instantly
+3. Your preference is automatically saved
+4. Works on all pages: Home, Books, French Learning
 
-### For total_time field:
-See `DATABASE_MIGRATION.md` for detailed instructions.
-
-### For new enhanced fields:
-See `DATABASE_MIGRATION_NEW_FIELDS.md` for:
-- `new_vocabulary` array field
-- `practice_sentences` array field
-- `mood` field
-
-## Deployment
-
-This project is configured for deployment on Vercel:
-
-1. Push your code to GitHub
-2. Import the project in Vercel
-3. Add your environment variables in Vercel project settings
-4. Deploy!
-
-## Usage
+### Daily Quotes
+- A new inspirational quote appears on the homepage each day
+- Quotes cover personal growth, learning, and philosophical wisdom
+- The same quote displays throughout the day for consistency
+- Quotes automatically rotate at midnight
 
 ### Books Dashboard
-1. Click "Add Book" to add a new book to your collection
-2. Fill in the book details (title, author, total pages, current page)
-3. Update your reading progress anytime by editing the book
-4. Track your overall reading statistics
+1. Click \"Add Book\" to add a new book to your collection
+2. Fill in the book details (title, author, progress percentage)
+3. Add optional information:
+   - Genre/Category
+   - Rating (1-5 stars)
+   - Start and finish dates
+   - Language analysis notes
+   - Personal reflections
+4. Update your reading progress anytime by editing the book
+5. Track your overall reading statistics
+6. **Toggle dark mode** for comfortable nighttime reading
 
 ### French Learning Dashboard
 
 #### Logging an Activity
-1. Click "Log Activity" to open the form
+1. Click \"Log Activity\" to open the form
 2. Select your activity type (vocabulary, grammar, etc.)
 3. Enter duration in minutes
 4. Choose the date (defaults to today)
@@ -181,7 +188,7 @@ This project is configured for deployment on Vercel:
 7. **Optional**: Add practice sentences (comma-separated)
    - Example: `Comment allez-vous?, Je vais bien`
 8. **Optional**: Add notes about what you learned
-9. Click "Log Activity" to save
+9. Click \"Log Activity\" to save
 
 #### Viewing Your Progress
 - **Total Hours**: See your cumulative learning time (properly converted from minutes)
@@ -196,87 +203,74 @@ This project is configured for deployment on Vercel:
   - Practice sentences (bulleted list)
   - Session notes
 
-#### Understanding the Streak
-- Streak counts consecutive days with at least one activity
-- Missing a day resets the streak to 0
-- Visual encouragement when you maintain a streak
-- 7-day calendar highlights active days in purple
+## Database Migration
 
-## Features Walkthrough
+If you have an existing database, see these migration guides:
+- `DATABASE_MIGRATION.md` - For total_time field
+- `DATABASE_MIGRATION_NEW_FIELDS.md` - For vocabulary, sentences, and mood fields
 
-### Enhanced Activity Display
-Each logged activity now shows:
-- 📅 Date and duration
-- 🎯 Activity type
-- 😊 Mood indicator
-- 📚 New vocabulary as green badges
-- 💬 Practice sentences as a list
-- 📝 Session notes
+## Deployment
 
-### Smart Streak Calculation
-- Automatically calculates consecutive learning days
-- Handles timezone differences
-- Allows for activities logged on different dates
-- Shows visual feedback in the 7-day calendar
+This project is configured for deployment on Vercel:
 
-### Vocabulary Tracking
-- Enter words separated by commas
-- Automatically converts to array format
-- Displays as colored badges
-- Counts total words across all sessions
-- Shows count per activity
+1. Push your code to GitHub
+2. Import the project in Vercel
+3. Add your environment variables in Vercel project settings
+4. Deploy!
 
-### Time Calculations
-- **Input**: Minutes per session
-- **Storage**: Both `duration_minutes` and `total_time` fields
-- **Display**: Properly converted to hours (÷ 60, one decimal place)
-- **7-Day View**: Shows minutes per day for easy tracking
+Vercel will automatically deploy updates when you push to the main branch.
 
-## Field Mappings
+## Theme Customization
 
-### French Learning Activity
+### Light Mode Colors
+- Background: Gradient from blue-50 via white to purple-50
+- Text: Gray-900 (headings), Gray-600 (body)
+- Cards: White with subtle shadows
+- Primary: Blue (#0284c7)
 
-| User Input | Database Storage | Display |
-|------------|------------------|---------|
-| Duration (minutes) | `duration_minutes`, `total_time` | Total Hours (÷ 60) |
-| Vocabulary (comma-separated) | `new_vocabulary` (array) | Green badges |
-| Sentences (comma-separated) | `practice_sentences` (array) | Bullet list |
-| Mood (dropdown) | `mood` (text) | Emoji icons |
-| Date | `date` | Formatted date |
-| Notes | `notes` | Text paragraph |
+### Dark Mode Colors
+- Background: Gradient from gray-900 via gray-800 to gray-900
+- Text: White (headings), Gray-300 (body)
+- Cards: Gray-800 with gray-700 borders
+- Primary: Blue (#38bdf8)
 
-### Data Flow
-1. **Form Input**: User enters comma-separated strings
-2. **Processing**: Strings split into arrays
-3. **Storage**: Saved as PostgreSQL arrays
-4. **Retrieval**: Fetched as arrays
-5. **Display**: Rendered as badges/lists
+All colors meet WCAG AA contrast standards for accessibility.
+
+## Quote Collection
+
+The daily quotes feature includes 18 inspirational quotes:
+- **7 Personal Growth quotes** from Steve Jobs, Winston Churchill, Theodore Roosevelt, Eleanor Roosevelt, Confucius, George Addair, and Tony Robbins
+- **7 Learning quotes** from Nelson Mandela, B.B. King, Mahatma Gandhi, Brian Herbert, Leonardo da Vinci, Benjamin Franklin, and Helen Hayes
+- **4 Philosophy quotes** from Socrates, René Descartes, and Friedrich Nietzsche
 
 ## Troubleshooting
 
-### Total Hours Not Displaying
-- Ensure `total_time` field exists in your database
-- Run the migration script from `DATABASE_MIGRATION.md`
+### Dark Mode Issues
+- Clear browser cache if theme doesn't persist
+- Check browser console for localStorage errors
+- Ensure JavaScript is enabled
+
+### Quotes Not Displaying
 - Check browser console for errors
+- Verify component is imported correctly
+- Ensure the DailyQuote component is rendering
 
-### Vocabulary/Sentences Not Showing
-- Verify fields exist: `new_vocabulary`, `practice_sentences`
-- Run migration from `DATABASE_MIGRATION_NEW_FIELDS.md`
-- Check that data is stored as arrays (not JSON strings)
-
-### Streak Not Calculating
-- Ensure you have activities with consecutive dates
-- Check that dates are in correct format (YYYY-MM-DD)
-- Verify activities are being fetched correctly
-
-### Mood Indicators Missing
-- Add the `mood` field to your database
-- Ensure CHECK constraint allows: 'good', 'neutral', 'difficult'
-- Default value should be 'neutral'
+### Database Issues
+- Verify Supabase connection in `.env.local`
+- Check table schemas match the SQL commands above
+- Review Supabase logs for errors
 
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Changelog
+
+- **v2.0.0**: Added Dark Mode and Daily Inspirational Quotes
+  - See `CHANGELOG_DARK_MODE_AND_QUOTES.md` for details
+- **v1.5.0**: Enhanced French Learning features
+  - See `CHANGELOG_FRENCH_FIX.md` for details
+- **v1.0.0**: Initial release with Books and French Learning tracking
 
 ## License
 
@@ -286,12 +280,10 @@ MIT License - feel free to use this project for your own learning tracking needs
 
 Chris - [RixGem](https://github.com/RixGem)
 
-## Changelog
-
-See `CHANGELOG_FRENCH_FIX.md` for detailed change history.
-
 ---
 
 Built with ❤️ using Next.js and Supabase
 
 *Happy Learning! Keep that streak going! 🔥*
+
+**Pro tip**: Try dark mode for your late-night study sessions! 🌙
