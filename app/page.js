@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { BookOpen, Languages, TrendingUp, Target } from 'lucide-react'
+import DailyQuote from '@/components/DailyQuote'
 
 export default function Home() {
   return (
@@ -12,6 +13,11 @@ export default function Home() {
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
           Your personal learning sanctuary where every page read and every French word learned takes you one step closer to your goals
         </p>
+      </div>
+
+      {/* Daily Quote Section */}
+      <div className="max-w-4xl mx-auto">
+        <DailyQuote />
       </div>
 
       {/* Feature Cards */}
