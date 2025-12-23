@@ -131,13 +131,13 @@ export default function BooksPage() {
   function getStatusBadgeColor(status) {
     switch (status) {
       case 'reading':
-        return 'bg-blue-100 text-blue-700'
+        return 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
       case 'completed':
-        return 'bg-green-100 text-green-700'
+        return 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
       case 'planned':
-        return 'bg-yellow-100 text-yellow-700'
+        return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300'
       default:
-        return 'bg-gray-100 text-gray-700'
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
     }
   }
 
@@ -148,13 +148,13 @@ export default function BooksPage() {
   }
 
   function renderStars(rating) {
-    if (!rating) return <span className="text-gray-400 text-sm">未评分</span>
+    if (!rating) return <span className="text-gray-400 dark:text-gray-500 text-sm">未评分</span>
     return (
       <div className="flex items-center space-x-1">
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`w-4 h-4 ${star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
+            className={`w-4 h-4 ${star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 dark:text-gray-600'}`}
           />
         ))}
       </div>
@@ -162,7 +162,7 @@ export default function BooksPage() {
   }
 
   if (loading) {
-    return <div className="text-center py-12">Loading...</div>
+    return <div className="text-center py-12 text-gray-900 dark:text-gray-100">Loading...</div>
   }
 
   return (
@@ -170,8 +170,8 @@ export default function BooksPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Books Dashboard</h1>
-          <p className="text-gray-600 mt-2">Track your reading progress</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Books Dashboard</h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-2">Track your reading progress</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
@@ -184,25 +184,25 @@ export default function BooksPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="card p-6">
-          <div className="text-sm text-gray-600">Total Books</div>
-          <div className="text-3xl font-bold text-primary-600">{books.length}</div>
+        <div className="card p-6 dark:border dark:border-gray-700">
+          <div className="text-sm text-gray-600 dark:text-gray-400">Total Books</div>
+          <div className="text-3xl font-bold text-primary-600 dark:text-primary-400">{books.length}</div>
         </div>
-        <div className="card p-6">
-          <div className="text-sm text-gray-600">Currently Reading</div>
-          <div className="text-3xl font-bold text-blue-600">
+        <div className="card p-6 dark:border dark:border-gray-700">
+          <div className="text-sm text-gray-600 dark:text-gray-400">Currently Reading</div>
+          <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
             {books.filter(b => b.status === 'reading').length}
           </div>
         </div>
-        <div className="card p-6">
-          <div className="text-sm text-gray-600">Completed</div>
-          <div className="text-3xl font-bold text-green-600">
+        <div className="card p-6 dark:border dark:border-gray-700">
+          <div className="text-sm text-gray-600 dark:text-gray-400">Completed</div>
+          <div className="text-3xl font-bold text-green-600 dark:text-green-400">
             {books.filter(b => b.status === 'completed').length}
           </div>
         </div>
-        <div className="card p-6">
-          <div className="text-sm text-gray-600">Planned</div>
-          <div className="text-3xl font-bold text-yellow-600">
+        <div className="card p-6 dark:border dark:border-gray-700">
+          <div className="text-sm text-gray-600 dark:text-gray-400">Planned</div>
+          <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
             {books.filter(b => b.status === 'planned').length}
           </div>
         </div>
@@ -210,8 +210,8 @@ export default function BooksPage() {
 
       {/* Form */}
       {showForm && (
-        <div className="card p-6">
-          <h2 className="text-xl font-semibold mb-4">
+        <div className="card p-6 dark:border dark:border-gray-700">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
             {editingId ? 'Edit Book' : 'Add New Book'}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -341,10 +341,10 @@ export default function BooksPage() {
       {/* Books List */}
       <div className="grid gap-4">
         {books.length === 0 ? (
-          <div className="card p-12 text-center">
-            <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No books yet</h3>
-            <p className="text-gray-600 mb-4">Start tracking your reading journey by adding your first book</p>
+          <div className="card p-12 text-center dark:border dark:border-gray-700">
+            <BookOpen className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No books yet</h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">Start tracking your reading journey by adding your first book</p>
             <button onClick={() => setShowForm(true)} className="btn-primary">
               Add Your First Book
             </button>
@@ -353,24 +353,24 @@ export default function BooksPage() {
           books.map((book) => {
             const progress = parseFloat(book.progress) || 0
             return (
-              <div key={book.id} className="card p-6">
+              <div key={book.id} className="card p-6 dark:border dark:border-gray-700">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="text-xl font-semibold text-gray-900">{book.title}</h3>
-                        <p className="text-gray-600">by {book.author}</p>
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{book.title}</h3>
+                        <p className="text-gray-600 dark:text-gray-300">by {book.author}</p>
                       </div>
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleEdit(book)}
-                          className="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                          className="p-2 text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
                         >
                           <Edit2 className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => handleDelete(book.id)}
-                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
@@ -383,7 +383,7 @@ export default function BooksPage() {
                         {book.status}
                       </span>
                       {book.genre && (
-                        <span className="flex items-center text-sm text-gray-600">
+                        <span className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                           <Tag className="w-4 h-4 mr-1" />
                           {book.genre}
                         </span>
@@ -397,7 +397,7 @@ export default function BooksPage() {
 
                     {/* Dates Section */}
                     {(book.date_started || book.date_finished || book.date_updated) && (
-                      <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                      <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                         {book.date_started && (
                           <span className="flex items-center">
                             <Calendar className="w-4 h-4 mr-1" />
@@ -405,13 +405,13 @@ export default function BooksPage() {
                           </span>
                         )}
                         {book.date_finished && (
-                          <span className="flex items-center text-green-600">
+                          <span className="flex items-center text-green-600 dark:text-green-400">
                             <Calendar className="w-4 h-4 mr-1" />
                             完成: {formatDate(book.date_finished)}
                           </span>
                         )}
                         {book.date_updated && !book.date_finished && (
-                          <span className="flex items-center text-gray-400">
+                          <span className="flex items-center text-gray-400 dark:text-gray-500">
                             最后更新: {formatDate(book.date_updated)}
                           </span>
                         )}
@@ -420,12 +420,12 @@ export default function BooksPage() {
 
                     {/* Language Analysis */}
                     {book.language_analysis && (
-                      <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                      <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
                         <div className="flex items-start">
-                          <Globe className="w-4 h-4 mr-2 mt-0.5 text-blue-600 flex-shrink-0" />
+                          <Globe className="w-4 h-4 mr-2 mt-0.5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                           <div>
-                            <div className="text-xs font-semibold text-blue-700 mb-1">语言分析</div>
-                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{book.language_analysis}</p>
+                            <div className="text-xs font-semibold text-blue-700 dark:text-blue-400 mb-1">语言分析</div>
+                            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{book.language_analysis}</p>
                           </div>
                         </div>
                       </div>
@@ -433,12 +433,12 @@ export default function BooksPage() {
 
                     {/* Notes */}
                     {book.notes && (
-                      <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
                         <div className="flex items-start">
-                          <FileText className="w-4 h-4 mr-2 mt-0.5 text-gray-600 flex-shrink-0" />
+                          <FileText className="w-4 h-4 mr-2 mt-0.5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
                           <div>
-                            <div className="text-xs font-semibold text-gray-700 mb-1">笔记</div>
-                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{book.notes}</p>
+                            <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">笔记</div>
+                            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{book.notes}</p>
                           </div>
                         </div>
                       </div>
@@ -449,12 +449,12 @@ export default function BooksPage() {
                 {/* Progress Bar */}
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Progress</span>
-                    <span className="font-medium text-primary-600">{progress.toFixed(1)}%</span>
+                    <span className="text-gray-600 dark:text-gray-400">Progress</span>
+                    <span className="font-medium text-primary-600 dark:text-primary-400">{progress.toFixed(1)}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
                     <div
-                      className="bg-primary-600 h-3 rounded-full transition-all duration-300"
+                      className="bg-primary-600 dark:bg-primary-500 h-3 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
                     />
                   </div>
