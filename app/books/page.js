@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { BookOpen, Plus, Edit2, Trash2, Save, X } from 'lucide-react'
+import { BookOpen, Plus, Edit2, Trash2, Save, X, Star, Calendar, Globe, Tag, FileText } from 'lucide-react'
 
 export default function BooksPage() {
   const [books, setBooks] = useState([])
@@ -12,9 +12,14 @@ export default function BooksPage() {
   const [formData, setFormData] = useState({
     title: '',
     author: '',
-    total_pages: '',
-    current_page: 0,
-    status: 'reading'
+    progress: 0,
+    status: 'reading',
+    genre: '',
+    rating: 0,
+    language_analysis: '',
+    notes: '',
+    date_started: '',
+    date_finished: ''
   })
 
   useEffect(() => {
@@ -40,24 +45,29 @@ export default function BooksPage() {
   async function handleSubmit(e) {
     e.preventDefault()
     try {
+      const dataToSave = {
+        title: formData.title,
+        author: formData.author,
+        progress: parseFloat(formData.progress) || 0,
+        status: formData.status,
+        genre: formData.genre || null,
+        rating: parseInt(formData.rating) || null,
+        language_analysis: formData.language_analysis || null,
+        notes: formData.notes || null,
+        date_started: formData.date_started || null,
+        date_finished: formData.date_finished || null
+      }
+
       if (editingId) {
         const { error } = await supabase
           .from('books')
-          .update({
-            ...formData,
-            total_pages: parseInt(formData.total_pages),
-            current_page: parseInt(formData.current_page)
-          })
+          .update(dataToSave)
           .eq('id', editingId)
         if (error) throw error
       } else {
         const { error } = await supabase
           .from('books')
-          .insert([{
-            ...formData,
-            total_pages: parseInt(formData.total_pages),
-            current_page: parseInt(formData.current_page)
-          }])
+          .insert([dataToSave])
         if (error) throw error
       }
       
@@ -65,7 +75,7 @@ export default function BooksPage() {
       fetchBooks()
     } catch (error) {
       console.error('Error saving book:', error)
-      alert('Error saving book. Please make sure the books table exists in Supabase.')
+      alert('Error saving book: ' + error.message)
     }
   }
 
@@ -86,11 +96,16 @@ export default function BooksPage() {
 
   function handleEdit(book) {
     setFormData({
-      title: book.title,
-      author: book.author,
-      total_pages: book.total_pages.toString(),
-      current_page: book.current_page,
-      status: book.status
+      title: book.title || '',
+      author: book.author || '',
+      progress: book.progress || 0,
+      status: book.status || 'reading',
+      genre: book.genre || '',
+      rating: book.rating || 0,
+      language_analysis: book.language_analysis || '',
+      notes: book.notes || '',
+      date_started: book.date_started || '',
+      date_finished: book.date_finished || ''
     })
     setEditingId(book.id)
     setShowForm(true)
@@ -100,16 +115,50 @@ export default function BooksPage() {
     setFormData({
       title: '',
       author: '',
-      total_pages: '',
-      current_page: 0,
-      status: 'reading'
+      progress: 0,
+      status: 'reading',
+      genre: '',
+      rating: 0,
+      language_analysis: '',
+      notes: '',
+      date_started: '',
+      date_finished: ''
     })
     setEditingId(null)
     setShowForm(false)
   }
 
-  function calculateProgress(current, total) {
-    return Math.round((current / total) * 100)
+  function getStatusBadgeColor(status) {
+    switch (status) {
+      case 'reading':
+        return 'bg-blue-100 text-blue-700'
+      case 'completed':
+        return 'bg-green-100 text-green-700'
+      case 'planned':
+        return 'bg-yellow-100 text-yellow-700'
+      default:
+        return 'bg-gray-100 text-gray-700'
+    }
+  }
+
+  function formatDate(dateString) {
+    if (!dateString) return null
+    const date = new Date(dateString)
+    return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' })
+  }
+
+  function renderStars(rating) {
+    if (!rating) return <span className="text-gray-400 text-sm">未评分</span>
+    return (
+      <div className="flex items-center space-x-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`w-4 h-4 ${star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
+          />
+        ))}
+      </div>
+    )
   }
 
   if (loading) {
@@ -134,21 +183,27 @@ export default function BooksPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="card p-6">
           <div className="text-sm text-gray-600">Total Books</div>
           <div className="text-3xl font-bold text-primary-600">{books.length}</div>
         </div>
         <div className="card p-6">
           <div className="text-sm text-gray-600">Currently Reading</div>
-          <div className="text-3xl font-bold text-green-600">
+          <div className="text-3xl font-bold text-blue-600">
             {books.filter(b => b.status === 'reading').length}
           </div>
         </div>
         <div className="card p-6">
           <div className="text-sm text-gray-600">Completed</div>
-          <div className="text-3xl font-bold text-purple-600">
+          <div className="text-3xl font-bold text-green-600">
             {books.filter(b => b.status === 'completed').length}
+          </div>
+        </div>
+        <div className="card p-6">
+          <div className="text-sm text-gray-600">Planned</div>
+          <div className="text-3xl font-bold text-yellow-600">
+            {books.filter(b => b.status === 'planned').length}
           </div>
         </div>
       </div>
@@ -182,37 +237,92 @@ export default function BooksPage() {
                 />
               </div>
               <div>
-                <label className="label">Total Pages *</label>
+                <label className="label">Progress (%) *</label>
                 <input
                   type="number"
                   required
-                  min="1"
-                  className="input-field"
-                  value={formData.total_pages}
-                  onChange={(e) => setFormData({ ...formData, total_pages: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="label">Current Page</label>
-                <input
-                  type="number"
                   min="0"
+                  max="100"
+                  step="0.1"
                   className="input-field"
-                  value={formData.current_page}
-                  onChange={(e) => setFormData({ ...formData, current_page: parseInt(e.target.value) || 0 })}
+                  value={formData.progress}
+                  onChange={(e) => setFormData({ ...formData, progress: e.target.value })}
                 />
               </div>
               <div>
-                <label className="label">Status</label>
+                <label className="label">Status *</label>
                 <select
                   className="input-field"
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 >
-                  <option value="to-read">To Read</option>
+                  <option value="planned">Planned</option>
                   <option value="reading">Reading</option>
                   <option value="completed">Completed</option>
                 </select>
+              </div>
+              <div>
+                <label className="label">Genre (题材/分类)</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="e.g., Fiction, Science, Biography"
+                  value={formData.genre}
+                  onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="label">Rating (评分 1-5星)</label>
+                <select
+                  className="input-field"
+                  value={formData.rating}
+                  onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                >
+                  <option value="0">No rating</option>
+                  <option value="1">⭐ 1 Star</option>
+                  <option value="2">⭐⭐ 2 Stars</option>
+                  <option value="3">⭐⭐⭐ 3 Stars</option>
+                  <option value="4">⭐⭐⭐⭐ 4 Stars</option>
+                  <option value="5">⭐⭐⭐⭐⭐ 5 Stars</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Date Started (开始阅读时间)</label>
+                <input
+                  type="date"
+                  className="input-field"
+                  value={formData.date_started}
+                  onChange={(e) => setFormData({ ...formData, date_started: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="label">Date Finished (完成时间)</label>
+                <input
+                  type="date"
+                  className="input-field"
+                  value={formData.date_finished}
+                  onChange={(e) => setFormData({ ...formData, date_finished: e.target.value })}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="label">Language Analysis (语言分析)</label>
+                <textarea
+                  className="input-field"
+                  rows="2"
+                  placeholder="Language learning notes, vocabulary, expressions..."
+                  value={formData.language_analysis}
+                  onChange={(e) => setFormData({ ...formData, language_analysis: e.target.value })}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="label">Notes (笔记)</label>
+                <textarea
+                  className="input-field"
+                  rows="3"
+                  placeholder="Your thoughts, reflections, key takeaways..."
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                />
               </div>
             </div>
             <div className="flex space-x-3">
@@ -241,44 +351,111 @@ export default function BooksPage() {
           </div>
         ) : (
           books.map((book) => {
-            const progress = calculateProgress(book.current_page, book.total_pages)
+            const progress = parseFloat(book.progress) || 0
             return (
               <div key={book.id} className="card p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-gray-900">{book.title}</h3>
-                    <p className="text-gray-600">by {book.author}</p>
-                    <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
-                      <span>{book.current_page} / {book.total_pages} pages</span>
-                      <span className="capitalize px-3 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
-                        {book.status.replace('-', ' ')}
-                      </span>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="text-xl font-semibold text-gray-900">{book.title}</h3>
+                        <p className="text-gray-600">by {book.author}</p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleEdit(book)}
+                          className="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                        >
+                          <Edit2 className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(book.id)}
+                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleEdit(book)}
-                      className="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                    >
-                      <Edit2 className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(book.id)}
-                      className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    
+                    {/* Main Info Row */}
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <span className={`capitalize px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(book.status)}`}>
+                        {book.status}
+                      </span>
+                      {book.genre && (
+                        <span className="flex items-center text-sm text-gray-600">
+                          <Tag className="w-4 h-4 mr-1" />
+                          {book.genre}
+                        </span>
+                      )}
+                      {book.rating > 0 && (
+                        <span className="flex items-center">
+                          {renderStars(book.rating)}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Dates Section */}
+                    {(book.date_started || book.date_finished || book.date_updated) && (
+                      <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                        {book.date_started && (
+                          <span className="flex items-center">
+                            <Calendar className="w-4 h-4 mr-1" />
+                            开始: {formatDate(book.date_started)}
+                          </span>
+                        )}
+                        {book.date_finished && (
+                          <span className="flex items-center text-green-600">
+                            <Calendar className="w-4 h-4 mr-1" />
+                            完成: {formatDate(book.date_finished)}
+                          </span>
+                        )}
+                        {book.date_updated && !book.date_finished && (
+                          <span className="flex items-center text-gray-400">
+                            最后更新: {formatDate(book.date_updated)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Language Analysis */}
+                    {book.language_analysis && (
+                      <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <div className="flex items-start">
+                          <Globe className="w-4 h-4 mr-2 mt-0.5 text-blue-600 flex-shrink-0" />
+                          <div>
+                            <div className="text-xs font-semibold text-blue-700 mb-1">语言分析</div>
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{book.language_analysis}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Notes */}
+                    {book.notes && (
+                      <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex items-start">
+                          <FileText className="w-4 h-4 mr-2 mt-0.5 text-gray-600 flex-shrink-0" />
+                          <div>
+                            <div className="text-xs font-semibold text-gray-700 mb-1">笔记</div>
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{book.notes}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
+
+                {/* Progress Bar */}
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Progress</span>
-                    <span className="font-medium text-primary-600">{progress}%</span>
+                    <span className="font-medium text-primary-600">{progress.toFixed(1)}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3">
                     <div
                       className="bg-primary-600 h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${progress}%` }}
+                      style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
                     />
                   </div>
                 </div>
