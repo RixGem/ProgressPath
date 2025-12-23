@@ -17,6 +17,7 @@ A modern Next.js application to track your learning progress across books and la
 - Monitor learning duration and consistency
 - View learning streak visualization
 - Add notes for each learning session
+- Automatic total time calculation from total_time field
 
 ## Tech Stack
 
@@ -69,11 +70,12 @@ CREATE TABLE books (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
--- Create french_learning table
+-- Create french_learning table with total_time field
 CREATE TABLE french_learning (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   activity_type TEXT NOT NULL,
   duration_minutes INTEGER NOT NULL,
+  total_time INTEGER NOT NULL,  -- Total time in minutes (used for aggregated display)
   notes TEXT,
   date DATE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
@@ -90,6 +92,19 @@ CREATE POLICY "Enable all operations for books" ON books
 CREATE POLICY "Enable all operations for french_learning" ON french_learning
   FOR ALL USING (true);
 ```
+
+### Database Schema Details
+
+#### french_learning Table Fields:
+- `id`: Unique identifier (UUID)
+- `activity_type`: Type of learning activity (vocabulary, grammar, reading, listening, speaking, writing, exercise)
+- `duration_minutes`: Duration of the session in minutes (backward compatibility)
+- `total_time`: Total time in minutes (primary field for time calculations and automation)
+- `notes`: Optional notes about the learning session
+- `date`: Date of the activity
+- `created_at`: Timestamp of record creation
+
+**Important**: The `total_time` field is used for calculating Total Hours displayed on the dashboard and should match automation scripts.
 
 5. Run the development server:
 ```bash
@@ -119,7 +134,16 @@ This project is configured for deployment on Vercel:
 1. Click "Log Activity" to record a learning session
 2. Select the activity type (vocabulary, grammar, etc.)
 3. Enter the duration and optional notes
-4. View your learning streak and total hours
+4. View your learning streak and total hours (calculated from total_time field)
+
+## Field Mappings
+
+### French Learning Activity
+- **Frontend field**: `duration_minutes`
+- **Database fields**: 
+  - `duration_minutes` (for backward compatibility)
+  - `total_time` (primary field for calculations)
+- **Display**: Total Hours uses aggregated `total_time` from database
 
 ## Contributing
 
