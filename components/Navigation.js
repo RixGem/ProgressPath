@@ -22,7 +22,7 @@ export default function Navigation() {
             <div className="w-8 h-8 bg-primary-600 dark:bg-primary-500 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-xl">P</span>
             </div>
-            <span className="text-xl font-bold text-gray-900 dark:text-white">ProgressPath</span>
+            <span className="text-xl font-bold text-gray-900 dark:text-white">Chris's Learning Goal</span>
           </Link>
 
           <div className="flex items-center space-x-2">
