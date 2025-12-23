@@ -2,18 +2,22 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { Languages, Plus, Calendar, TrendingUp, X } from 'lucide-react'
+import { Languages, Plus, Calendar, TrendingUp, X, BookOpen, MessageSquare, Smile, Flame } from 'lucide-react'
 
 export default function FrenchPage() {
   const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [totalTime, setTotalTime] = useState(0)
+  const [currentStreak, setCurrentStreak] = useState(0)
   const [formData, setFormData] = useState({
     activity_type: 'vocabulary',
     duration_minutes: '',
     notes: '',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    new_vocabulary: '',
+    practice_sentences: '',
+    mood: 'neutral'
   })
 
   useEffect(() => {
@@ -31,6 +35,11 @@ export default function FrenchPage() {
       
       if (error) throw error
       setActivities(data || [])
+      
+      // Calculate streak from fetched activities
+      if (data && data.length > 0) {
+        calculateStreak(data)
+      }
     } catch (error) {
       console.error('Error fetching activities:', error)
     } finally {
@@ -38,19 +47,65 @@ export default function FrenchPage() {
     }
   }
 
+  function calculateStreak(activitiesData) {
+    if (!activitiesData || activitiesData.length === 0) {
+      setCurrentStreak(0)
+      return
+    }
+
+    // Sort activities by date in descending order
+    const sortedActivities = [...activitiesData].sort((a, b) => 
+      new Date(b.date) - new Date(a.date)
+    )
+
+    let streak = 0
+    let currentDate = new Date()
+    currentDate.setHours(0, 0, 0, 0)
+
+    // Check if there's an activity today or yesterday
+    const mostRecentActivity = new Date(sortedActivities[0].date)
+    mostRecentActivity.setHours(0, 0, 0, 0)
+    
+    const daysDifference = Math.floor((currentDate - mostRecentActivity) / (1000 * 60 * 60 * 24))
+    
+    // If last activity was more than 1 day ago, streak is broken
+    if (daysDifference > 1) {
+      setCurrentStreak(0)
+      return
+    }
+
+    // Start counting from yesterday if last activity was yesterday, or today if it was today
+    let checkDate = new Date(currentDate)
+    if (daysDifference === 1) {
+      checkDate.setDate(checkDate.getDate() - 1)
+    }
+
+    // Count consecutive days
+    const activityDates = new Set(sortedActivities.map(a => a.date))
+    
+    while (true) {
+      const dateStr = checkDate.toISOString().split('T')[0]
+      if (activityDates.has(dateStr)) {
+        streak++
+        checkDate.setDate(checkDate.getDate() - 1)
+      } else {
+        break
+      }
+    }
+
+    setCurrentStreak(streak)
+  }
+
   async function fetchTotalTime() {
     try {
-      // Try to get total_time field from database if it exists
       const { data, error } = await supabase
         .from('french_learning')
         .select('total_time, duration_minutes')
       
       if (error) throw error
       
-      // Calculate total time from database records
-      // Use total_time field if available, otherwise fall back to duration_minutes
+      // Calculate total time - use total_time field if available, otherwise duration_minutes
       const total = data.reduce((sum, record) => {
-        // Check if total_time field exists and use it, otherwise use duration_minutes
         const time = record.total_time !== undefined && record.total_time !== null 
           ? record.total_time 
           : record.duration_minutes
@@ -68,13 +123,27 @@ export default function FrenchPage() {
     try {
       const durationMinutes = parseInt(formData.duration_minutes)
       
-      // Prepare the insert data
+      // Parse vocabulary and sentences from comma-separated strings to arrays
+      const vocabularyArray = formData.new_vocabulary
+        .split(',')
+        .map(v => v.trim())
+        .filter(v => v.length > 0)
+      
+      const sentencesArray = formData.practice_sentences
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s.length > 0)
+      
+      // Prepare the insert data with all fields
       const insertData = {
         activity_type: formData.activity_type,
         duration_minutes: durationMinutes,
-        total_time: durationMinutes, // Also set total_time field
+        total_time: durationMinutes,
         notes: formData.notes,
-        date: formData.date
+        date: formData.date,
+        new_vocabulary: vocabularyArray.length > 0 ? vocabularyArray : null,
+        practice_sentences: sentencesArray.length > 0 ? sentencesArray : null,
+        mood: formData.mood
       }
       
       const { error } = await supabase
@@ -88,7 +157,7 @@ export default function FrenchPage() {
       fetchTotalTime()
     } catch (error) {
       console.error('Error saving activity:', error)
-      alert('Error saving activity. Please make sure the french_learning table exists in Supabase.')
+      alert('Error saving activity: ' + error.message)
     }
   }
 
@@ -97,14 +166,17 @@ export default function FrenchPage() {
       activity_type: 'vocabulary',
       duration_minutes: '',
       notes: '',
-      date: new Date().toISOString().split('T')[0]
+      date: new Date().toISOString().split('T')[0],
+      new_vocabulary: '',
+      practice_sentences: '',
+      mood: 'neutral'
     })
     setShowForm(false)
   }
 
   function calculateStats() {
-    // Use totalTime state which is fetched from database total_time field
-    const totalHours = Math.round(totalTime / 60 * 10) / 10
+    // Convert total minutes to hours (properly)
+    const totalHours = (totalTime / 60).toFixed(1)
     
     const thisWeek = activities.filter(a => {
       const activityDate = new Date(a.date)
@@ -113,7 +185,32 @@ export default function FrenchPage() {
       return activityDate >= weekAgo
     }).length
     
-    return { totalHours, totalSessions: activities.length, thisWeek }
+    const totalVocabulary = activities.reduce((sum, a) => {
+      if (a.new_vocabulary && Array.isArray(a.new_vocabulary)) {
+        return sum + a.new_vocabulary.length
+      }
+      return sum
+    }, 0)
+    
+    return { totalHours, totalSessions: activities.length, thisWeek, totalVocabulary, currentStreak }
+  }
+
+  function getMoodEmoji(mood) {
+    switch(mood) {
+      case 'good': return '😊'
+      case 'neutral': return '😐'
+      case 'difficult': return '😓'
+      default: return '😐'
+    }
+  }
+
+  function getMoodColor(mood) {
+    switch(mood) {
+      case 'good': return 'text-green-600'
+      case 'neutral': return 'text-yellow-600'
+      case 'difficult': return 'text-red-600'
+      default: return 'text-gray-600'
+    }
   }
 
   const stats = calculateStats()
@@ -128,7 +225,7 @@ export default function FrenchPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">French Learning</h1>
-          <p className="text-gray-600 mt-2">Track your daily learning activities</p>
+          <p className="text-gray-600 mt-2">Track your daily learning activities and progress</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
@@ -139,20 +236,46 @@ export default function FrenchPage() {
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card p-6">
-          <div className="text-sm text-gray-600">Total Hours</div>
-          <div className="text-3xl font-bold text-purple-600">{stats.totalHours}h</div>
-          <div className="text-xs text-gray-500 mt-1">Based on total_time field</div>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-gray-600">Total Hours</div>
+              <div className="text-3xl font-bold text-purple-600">{stats.totalHours}h</div>
+            </div>
+            <TrendingUp className="w-8 h-8 text-purple-400" />
+          </div>
         </div>
+        
         <div className="card p-6">
-          <div className="text-sm text-gray-600">Total Sessions</div>
-          <div className="text-3xl font-bold text-primary-600">{stats.totalSessions}</div>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-gray-600">Current Streak</div>
+              <div className="text-3xl font-bold text-orange-600">{stats.currentStreak} days</div>
+            </div>
+            <Flame className="w-8 h-8 text-orange-400" />
+          </div>
         </div>
+        
         <div className="card p-6">
-          <div className="text-sm text-gray-600">This Week</div>
-          <div className="text-3xl font-bold text-green-600">{stats.thisWeek}</div>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-gray-600">Total Sessions</div>
+              <div className="text-3xl font-bold text-primary-600">{stats.totalSessions}</div>
+            </div>
+            <Calendar className="w-8 h-8 text-primary-400" />
+          </div>
+        </div>
+        
+        <div className="card p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-gray-600">Vocabulary Words</div>
+              <div className="text-3xl font-bold text-green-600">{stats.totalVocabulary}</div>
+            </div>
+            <BookOpen className="w-8 h-8 text-green-400" />
+          </div>
         </div>
       </div>
 
@@ -179,6 +302,7 @@ export default function FrenchPage() {
                   <option value="exercise">Exercise</option>
                 </select>
               </div>
+              
               <div>
                 <label className="label">Duration (minutes) *</label>
                 <input
@@ -190,6 +314,7 @@ export default function FrenchPage() {
                   onChange={(e) => setFormData({ ...formData, duration_minutes: e.target.value })}
                 />
               </div>
+              
               <div>
                 <label className="label">Date *</label>
                 <input
@@ -200,7 +325,46 @@ export default function FrenchPage() {
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 />
               </div>
+              
+              <div>
+                <label className="label">How did it go? *</label>
+                <select
+                  className="input-field"
+                  value={formData.mood}
+                  onChange={(e) => setFormData({ ...formData, mood: e.target.value })}
+                  required
+                >
+                  <option value="good">😊 Good - Felt confident</option>
+                  <option value="neutral">😐 Neutral - Okay progress</option>
+                  <option value="difficult">😓 Difficult - Challenging</option>
+                </select>
+              </div>
             </div>
+            
+            <div>
+              <label className="label">New Vocabulary</label>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="Enter words separated by commas (e.g., bonjour, merci, au revoir)"
+                value={formData.new_vocabulary}
+                onChange={(e) => setFormData({ ...formData, new_vocabulary: e.target.value })}
+              />
+              <p className="text-xs text-gray-500 mt-1">Separate multiple words with commas</p>
+            </div>
+            
+            <div>
+              <label className="label">Practice Sentences</label>
+              <textarea
+                className="input-field"
+                rows="2"
+                placeholder="Enter sentences separated by commas"
+                value={formData.practice_sentences}
+                onChange={(e) => setFormData({ ...formData, practice_sentences: e.target.value })}
+              />
+              <p className="text-xs text-gray-500 mt-1">Separate multiple sentences with commas</p>
+            </div>
+            
             <div>
               <label className="label">Notes</label>
               <textarea
@@ -211,6 +375,7 @@ export default function FrenchPage() {
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               />
             </div>
+            
             <div className="flex space-x-3">
               <button type="submit" className="btn-primary">Log Activity</button>
               <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
@@ -243,10 +408,10 @@ export default function FrenchPage() {
                 : activity.duration_minutes
               
               return (
-                <div key={activity.id} className="border-l-4 border-purple-500 pl-4 py-2">
+                <div key={activity.id} className="border-l-4 border-purple-500 pl-4 py-3 bg-gray-50 rounded-r-lg">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-3 mb-2">
                         <span className="font-semibold text-gray-900 capitalize">
                           {activity.activity_type}
                         </span>
@@ -260,9 +425,45 @@ export default function FrenchPage() {
                             year: 'numeric' 
                           })}
                         </span>
+                        {activity.mood && (
+                          <span className={`text-lg ${getMoodColor(activity.mood)}`} title={activity.mood}>
+                            {getMoodEmoji(activity.mood)}
+                          </span>
+                        )}
                       </div>
+                      
+                      {activity.new_vocabulary && Array.isArray(activity.new_vocabulary) && activity.new_vocabulary.length > 0 && (
+                        <div className="mb-2">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <BookOpen className="w-4 h-4 text-green-600" />
+                            <span className="text-sm font-medium text-gray-700">New Vocabulary ({activity.new_vocabulary.length}):</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2 ml-6">
+                            {activity.new_vocabulary.map((word, idx) => (
+                              <span key={idx} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                                {word}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {activity.practice_sentences && Array.isArray(activity.practice_sentences) && activity.practice_sentences.length > 0 && (
+                        <div className="mb-2">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <MessageSquare className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm font-medium text-gray-700">Practice Sentences:</span>
+                          </div>
+                          <ul className="ml-6 space-y-1">
+                            {activity.practice_sentences.map((sentence, idx) => (
+                              <li key={idx} className="text-sm text-gray-600 italic">• {sentence}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
                       {activity.notes && (
-                        <p className="text-gray-600 mt-1 text-sm">{activity.notes}</p>
+                        <p className="text-gray-600 text-sm mt-2">{activity.notes}</p>
                       )}
                     </div>
                   </div>
@@ -273,31 +474,52 @@ export default function FrenchPage() {
         )}
       </div>
 
-      {/* Progress Chart Placeholder */}
+      {/* Learning Streak Visualization */}
       {activities.length > 0 && (
         <div className="card p-6">
           <h2 className="text-xl font-semibold mb-4 flex items-center space-x-2">
-            <TrendingUp className="w-5 h-5" />
-            <span>Learning Streak</span>
+            <Flame className="w-5 h-5 text-orange-500" />
+            <span>7-Day Activity</span>
           </h2>
           <div className="grid grid-cols-7 gap-2">
             {Array.from({ length: 7 }).map((_, i) => {
               const date = new Date()
               date.setDate(date.getDate() - (6 - i))
               const dateStr = date.toISOString().split('T')[0]
-              const hasActivity = activities.some(a => a.date === dateStr)
+              const dayActivities = activities.filter(a => a.date === dateStr)
+              const hasActivity = dayActivities.length > 0
+              const totalMinutes = dayActivities.reduce((sum, a) => {
+                const time = a.total_time !== undefined && a.total_time !== null ? a.total_time : a.duration_minutes
+                return sum + (time || 0)
+              }, 0)
+              
               return (
                 <div key={i} className="text-center">
-                  <div className={`h-16 rounded-lg ${
-                    hasActivity ? 'bg-purple-500' : 'bg-gray-200'
-                  }`} />
+                  <div 
+                    className={`h-20 rounded-lg flex items-center justify-center ${
+                      hasActivity ? 'bg-purple-500 text-white font-semibold' : 'bg-gray-200'
+                    }`}
+                    title={hasActivity ? `${totalMinutes} minutes` : 'No activity'}
+                  >
+                    {hasActivity && <span className="text-sm">{totalMinutes}m</span>}
+                  </div>
                   <div className="text-xs text-gray-600 mt-1">
                     {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    {date.getDate()}
                   </div>
                 </div>
               )
             })}
           </div>
+          {stats.currentStreak > 0 && (
+            <div className="mt-4 text-center">
+              <p className="text-sm text-gray-600">
+                Keep it up! You're on a <span className="font-bold text-orange-600">{stats.currentStreak}-day streak</span> 🔥
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
