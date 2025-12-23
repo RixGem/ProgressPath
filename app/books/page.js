@@ -12,8 +12,7 @@ export default function BooksPage() {
   const [formData, setFormData] = useState({
     title: '',
     author: '',
-    total_pages: '',
-    current_page: 0,
+    progress: 0,
     status: 'reading'
   })
 
@@ -45,8 +44,7 @@ export default function BooksPage() {
           .from('books')
           .update({
             ...formData,
-            total_pages: parseInt(formData.total_pages),
-            current_page: parseInt(formData.current_page)
+            progress: parseInt(formData.progress) || 0
           })
           .eq('id', editingId)
         if (error) throw error
@@ -55,8 +53,7 @@ export default function BooksPage() {
           .from('books')
           .insert([{
             ...formData,
-            total_pages: parseInt(formData.total_pages),
-            current_page: parseInt(formData.current_page)
+            progress: parseInt(formData.progress) || 0
           }])
         if (error) throw error
       }
@@ -88,8 +85,7 @@ export default function BooksPage() {
     setFormData({
       title: book.title,
       author: book.author,
-      total_pages: book.total_pages.toString(),
-      current_page: book.current_page,
+      progress: book.progress || 0,
       status: book.status
     })
     setEditingId(book.id)
@@ -100,16 +96,11 @@ export default function BooksPage() {
     setFormData({
       title: '',
       author: '',
-      total_pages: '',
-      current_page: 0,
+      progress: 0,
       status: 'reading'
     })
     setEditingId(null)
     setShowForm(false)
-  }
-
-  function calculateProgress(current, total) {
-    return Math.round((current / total) * 100)
   }
 
   if (loading) {
@@ -182,24 +173,14 @@ export default function BooksPage() {
                 />
               </div>
               <div>
-                <label className="label">Total Pages *</label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  className="input-field"
-                  value={formData.total_pages}
-                  onChange={(e) => setFormData({ ...formData, total_pages: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="label">Current Page</label>
+                <label className="label">Progress (%)</label>
                 <input
                   type="number"
                   min="0"
+                  max="100"
                   className="input-field"
-                  value={formData.current_page}
-                  onChange={(e) => setFormData({ ...formData, current_page: parseInt(e.target.value) || 0 })}
+                  value={formData.progress}
+                  onChange={(e) => setFormData({ ...formData, progress: parseInt(e.target.value) || 0 })}
                 />
               </div>
               <div>
@@ -241,15 +222,14 @@ export default function BooksPage() {
           </div>
         ) : (
           books.map((book) => {
-            const progress = calculateProgress(book.current_page, book.total_pages)
+            const progress = book.progress || 0
             return (
               <div key={book.id} className="card p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">
                     <h3 className="text-xl font-semibold text-gray-900">{book.title}</h3>
                     <p className="text-gray-600">by {book.author}</p>
-                    <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
-                      <span>{book.current_page} / {book.total_pages} pages</span>
+                    <div className="mt-2 flex items-center space-x-4 text-sm">
                       <span className="capitalize px-3 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
                         {book.status.replace('-', ' ')}
                       </span>
@@ -278,7 +258,7 @@ export default function BooksPage() {
                   <div className="w-full bg-gray-200 rounded-full h-3">
                     <div
                       className="bg-primary-600 h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${progress}%` }}
+                      style={{ width: `${Math.min(progress, 100)}%` }}
                     />
                   </div>
                 </div>
