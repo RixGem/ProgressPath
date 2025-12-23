@@ -8,6 +8,7 @@ export default function FrenchPage() {
   const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [totalTime, setTotalTime] = useState(0)
   const [formData, setFormData] = useState({
     activity_type: 'vocabulary',
     duration_minutes: '',
@@ -17,6 +18,7 @@ export default function FrenchPage() {
 
   useEffect(() => {
     fetchActivities()
+    fetchTotalTime()
   }, [])
 
   async function fetchActivities() {
@@ -36,19 +38,54 @@ export default function FrenchPage() {
     }
   }
 
+  async function fetchTotalTime() {
+    try {
+      // Try to get total_time field from database if it exists
+      const { data, error } = await supabase
+        .from('french_learning')
+        .select('total_time, duration_minutes')
+      
+      if (error) throw error
+      
+      // Calculate total time from database records
+      // Use total_time field if available, otherwise fall back to duration_minutes
+      const total = data.reduce((sum, record) => {
+        // Check if total_time field exists and use it, otherwise use duration_minutes
+        const time = record.total_time !== undefined && record.total_time !== null 
+          ? record.total_time 
+          : record.duration_minutes
+        return sum + (time || 0)
+      }, 0)
+      
+      setTotalTime(total)
+    } catch (error) {
+      console.error('Error fetching total time:', error)
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     try {
+      const durationMinutes = parseInt(formData.duration_minutes)
+      
+      // Prepare the insert data
+      const insertData = {
+        activity_type: formData.activity_type,
+        duration_minutes: durationMinutes,
+        total_time: durationMinutes, // Also set total_time field
+        notes: formData.notes,
+        date: formData.date
+      }
+      
       const { error } = await supabase
         .from('french_learning')
-        .insert([{
-          ...formData,
-          duration_minutes: parseInt(formData.duration_minutes)
-        }])
+        .insert([insertData])
+        
       if (error) throw error
       
       resetForm()
       fetchActivities()
+      fetchTotalTime()
     } catch (error) {
       console.error('Error saving activity:', error)
       alert('Error saving activity. Please make sure the french_learning table exists in Supabase.')
@@ -66,14 +103,16 @@ export default function FrenchPage() {
   }
 
   function calculateStats() {
-    const totalMinutes = activities.reduce((sum, a) => sum + a.duration_minutes, 0)
-    const totalHours = Math.round(totalMinutes / 60 * 10) / 10
+    // Use totalTime state which is fetched from database total_time field
+    const totalHours = Math.round(totalTime / 60 * 10) / 10
+    
     const thisWeek = activities.filter(a => {
       const activityDate = new Date(a.date)
       const weekAgo = new Date()
       weekAgo.setDate(weekAgo.getDate() - 7)
       return activityDate >= weekAgo
     }).length
+    
     return { totalHours, totalSessions: activities.length, thisWeek }
   }
 
@@ -105,6 +144,7 @@ export default function FrenchPage() {
         <div className="card p-6">
           <div className="text-sm text-gray-600">Total Hours</div>
           <div className="text-3xl font-bold text-purple-600">{stats.totalHours}h</div>
+          <div className="text-xs text-gray-500 mt-1">Based on total_time field</div>
         </div>
         <div className="card p-6">
           <div className="text-sm text-gray-600">Total Sessions</div>
@@ -196,32 +236,39 @@ export default function FrenchPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {activities.map((activity) => (
-              <div key={activity.id} className="border-l-4 border-purple-500 pl-4 py-2">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3">
-                      <span className="font-semibold text-gray-900 capitalize">
-                        {activity.activity_type}
-                      </span>
-                      <span className="text-sm text-gray-500">
-                        {activity.duration_minutes} min
-                      </span>
-                      <span className="text-sm text-gray-400">
-                        {new Date(activity.date).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric', 
-                          year: 'numeric' 
-                        })}
-                      </span>
+            {activities.map((activity) => {
+              // Display total_time if available, otherwise fall back to duration_minutes
+              const displayDuration = activity.total_time !== undefined && activity.total_time !== null
+                ? activity.total_time
+                : activity.duration_minutes
+              
+              return (
+                <div key={activity.id} className="border-l-4 border-purple-500 pl-4 py-2">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <span className="font-semibold text-gray-900 capitalize">
+                          {activity.activity_type}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {displayDuration} min
+                        </span>
+                        <span className="text-sm text-gray-400">
+                          {new Date(activity.date).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          })}
+                        </span>
+                      </div>
+                      {activity.notes && (
+                        <p className="text-gray-600 mt-1 text-sm">{activity.notes}</p>
+                      )}
                     </div>
-                    {activity.notes && (
-                      <p className="text-gray-600 mt-1 text-sm">{activity.notes}</p>
-                    )}
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
