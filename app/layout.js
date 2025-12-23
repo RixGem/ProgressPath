@@ -5,8 +5,11 @@ import Navigation from '../components/Navigation'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'ProgressPath - Learning Tracker',
-  description: 'Track your learning progress across books and languages',
+  title: "Chris's Learning Goal - Learning Tracker",
+  description: "Track your learning progress across books and languages with Chris's Learning Goal",
+  icons: {
+    icon: '/favicon.ico',
+  },
 }
 
 export default function RootLayout({ children }) {
