@@ -25,6 +25,60 @@ export default function FrenchPage() {
     fetchTotalTime()
   }, [])
 
+  /**
+   * Helper function to normalize vocabulary data
+   * Handles both array and string formats
+   */
+  function normalizeVocabulary(vocabulary) {
+    if (!vocabulary) return []
+    
+    // If already an array, return it
+    if (Array.isArray(vocabulary)) {
+      return vocabulary
+    }
+    
+    // If it's a string, try to parse it
+    if (typeof vocabulary === 'string') {
+      // Check if it's in Chinese summary format (e.g., "8个新词汇，15个复习词汇")
+      if (vocabulary.includes('个新词汇') || vocabulary.includes('个复习词汇')) {
+        // This is a summary format without actual vocabulary
+        // Return empty array as we don't have the actual words
+        return []
+      }
+      
+      // Otherwise, split by comma and clean up
+      return vocabulary
+        .split(',')
+        .map(v => v.trim())
+        .filter(v => v.length > 0)
+    }
+    
+    return []
+  }
+
+  /**
+   * Helper function to normalize practice sentences
+   * Handles both array and string formats
+   */
+  function normalizeSentences(sentences) {
+    if (!sentences) return []
+    
+    // If already an array, return it
+    if (Array.isArray(sentences)) {
+      return sentences
+    }
+    
+    // If it's a string, split by comma
+    if (typeof sentences === 'string') {
+      return sentences
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s.length > 0)
+    }
+    
+    return []
+  }
+
   async function fetchActivities() {
     try {
       const { data, error } = await supabase
@@ -186,10 +240,8 @@ export default function FrenchPage() {
     }).length
     
     const totalVocabulary = activities.reduce((sum, a) => {
-      if (a.new_vocabulary && Array.isArray(a.new_vocabulary)) {
-        return sum + a.new_vocabulary.length
-      }
-      return sum
+      const vocab = normalizeVocabulary(a.new_vocabulary)
+      return sum + vocab.length
     }, 0)
     
     return { totalHours, totalSessions: activities.length, thisWeek, totalVocabulary, currentStreak }
@@ -407,6 +459,10 @@ export default function FrenchPage() {
                 ? activity.total_time
                 : activity.duration_minutes
               
+              // Normalize vocabulary and sentences to handle both string and array formats
+              const normalizedVocabulary = normalizeVocabulary(activity.new_vocabulary)
+              const normalizedSentences = normalizeSentences(activity.practice_sentences)
+              
               return (
                 <div key={activity.id} className="border-l-4 border-purple-500 pl-4 py-3 bg-gray-50 rounded-r-lg">
                   <div className="flex justify-between items-start">
@@ -432,14 +488,15 @@ export default function FrenchPage() {
                         )}
                       </div>
                       
-                      {activity.new_vocabulary && Array.isArray(activity.new_vocabulary) && activity.new_vocabulary.length > 0 && (
+                      {/* Display vocabulary if available */}
+                      {normalizedVocabulary.length > 0 && (
                         <div className="mb-2">
                           <div className="flex items-center space-x-2 mb-1">
                             <BookOpen className="w-4 h-4 text-green-600" />
-                            <span className="text-sm font-medium text-gray-700">New Vocabulary ({activity.new_vocabulary.length}):</span>
+                            <span className="text-sm font-medium text-gray-700">New Vocabulary ({normalizedVocabulary.length}):</span>
                           </div>
                           <div className="flex flex-wrap gap-2 ml-6">
-                            {activity.new_vocabulary.map((word, idx) => (
+                            {normalizedVocabulary.map((word, idx) => (
                               <span key={idx} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
                                 {word}
                               </span>
@@ -448,14 +505,33 @@ export default function FrenchPage() {
                         </div>
                       )}
                       
-                      {activity.practice_sentences && Array.isArray(activity.practice_sentences) && activity.practice_sentences.length > 0 && (
+                      {/* Show a notice if vocabulary data is in old format */}
+                      {!normalizedVocabulary.length && activity.new_vocabulary && 
+                       typeof activity.new_vocabulary === 'string' && 
+                       (activity.new_vocabulary.includes('个新词汇') || activity.new_vocabulary.includes('个复习词汇')) && (
+                        <div className="mb-2">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <BookOpen className="w-4 h-4 text-amber-600" />
+                            <span className="text-sm font-medium text-amber-700">Vocabulary Summary:</span>
+                          </div>
+                          <div className="ml-6 text-sm text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                            {activity.new_vocabulary}
+                            <span className="block text-xs mt-1 text-amber-500">
+                              ℹ️ Legacy data format - specific words not recorded
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Display practice sentences if available */}
+                      {normalizedSentences.length > 0 && (
                         <div className="mb-2">
                           <div className="flex items-center space-x-2 mb-1">
                             <MessageSquare className="w-4 h-4 text-blue-600" />
                             <span className="text-sm font-medium text-gray-700">Practice Sentences:</span>
                           </div>
                           <ul className="ml-6 space-y-1">
-                            {activity.practice_sentences.map((sentence, idx) => (
+                            {normalizedSentences.map((sentence, idx) => (
                               <li key={idx} className="text-sm text-gray-600 italic">• {sentence}</li>
                             ))}
                           </ul>
