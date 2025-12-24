@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 
-const quotes = [
+// Fallback quotes in case API fails
+const fallbackQuotes = [
   // Personal Growth (7 quotes)
   {
     text: "The only way to do great work is to love what you do.",
@@ -82,22 +83,117 @@ const quotes = [
   }
 ]
 
+// Session storage key for caching
+const CACHE_KEY = 'dailyQuote_cache'
+const CACHE_TIMESTAMP_KEY = 'dailyQuote_timestamp'
+
 export default function DailyQuote() {
   const [quote, setQuote] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    // Get day of year for consistent daily rotation
-    const now = new Date()
-    const start = new Date(now.getFullYear(), 0, 0)
-    const diff = now - start
-    const oneDay = 1000 * 60 * 60 * 24
-    const dayOfYear = Math.floor(diff / oneDay)
-    
-    // Select quote based on day of year
-    const quoteIndex = dayOfYear % quotes.length
-    setQuote(quotes[quoteIndex])
+    const fetchQuote = async () => {
+      try {
+        // Check if we have a cached quote in this session
+        const cachedQuote = sessionStorage.getItem(CACHE_KEY)
+        const cachedTimestamp = sessionStorage.getItem(CACHE_TIMESTAMP_KEY)
+        
+        if (cachedQuote && cachedTimestamp) {
+          // Use cached quote for this session
+          setQuote(JSON.parse(cachedQuote))
+          setIsLoading(false)
+          return
+        }
+
+        // Fetch from Zen Quotes API
+        setIsLoading(true)
+        setError(null)
+        
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+        
+        const response = await fetch('https://zenquotes.io/api/random', {
+          signal: controller.signal,
+          cache: 'no-store'
+        })
+        
+        clearTimeout(timeoutId)
+        
+        if (!response.ok) {
+          throw new Error('API request failed')
+        }
+        
+        const data = await response.json()
+        
+        if (data && data[0]) {
+          const apiQuote = {
+            text: data[0].q,
+            author: data[0].a
+          }
+          
+          // Cache the quote for this session
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify(apiQuote))
+          sessionStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString())
+          
+          setQuote(apiQuote)
+          setIsLoading(false)
+        } else {
+          throw new Error('Invalid API response')
+        }
+      } catch (err) {
+        console.error('Error fetching quote from API:', err)
+        setError(err.message)
+        
+        // Fall back to local quotes
+        const now = new Date()
+        const start = new Date(now.getFullYear(), 0, 0)
+        const diff = now - start
+        const oneDay = 1000 * 60 * 60 * 24
+        const dayOfYear = Math.floor(diff / oneDay)
+        
+        // Select fallback quote based on day of year
+        const quoteIndex = dayOfYear % fallbackQuotes.length
+        const fallbackQuote = fallbackQuotes[quoteIndex]
+        
+        // Cache the fallback quote for this session
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify(fallbackQuote))
+        sessionStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString())
+        
+        setQuote(fallbackQuote)
+        setIsLoading(false)
+      }
+    }
+
+    fetchQuote()
   }, [])
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="text-center">
+        <p className="text-xl text-gray-400 dark:text-gray-500 max-w-2xl mx-auto italic animate-pulse">
+          Loading inspiration...
+        </p>
+      </div>
+    )
+  }
+
+  // Error state with fallback quote
+  if (error && !quote) {
+    return (
+      <div className="text-center">
+        <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto italic">
+          &ldquo;Stay curious and keep learning.&rdquo;
+        </p>
+        <p className="text-lg text-gray-500 dark:text-gray-400 mt-2">
+          —— ProgressPath
+        </p>
+      </div>
+    )
+  }
+
+  // Normal state with quote
   if (!quote) return null
 
   return (
