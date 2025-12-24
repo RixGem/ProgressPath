@@ -3,8 +3,11 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Languages, Plus, Calendar, TrendingUp, X, BookOpen, MessageSquare, Smile, Flame } from 'lucide-react'
+import ProtectedRoute from '../../components/ProtectedRoute'
+import { useAuth } from '../../contexts/AuthContext'
 
 export default function FrenchPage() {
+  const { user } = useAuth()
   const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -21,15 +24,18 @@ export default function FrenchPage() {
   })
 
   useEffect(() => {
-    fetchActivities()
-    fetchTotalTime()
-  }, [])
+    if (user) {
+      fetchActivities()
+      fetchTotalTime()
+    }
+  }, [user])
 
   async function fetchActivities() {
     try {
       const { data, error } = await supabase
         .from('french_learning')
         .select('*')
+        .eq('user_id', user.id)
         .order('date', { ascending: false })
         .limit(30)
       
@@ -95,6 +101,7 @@ export default function FrenchPage() {
       const { data, error } = await supabase
         .from('french_learning')
         .select('total_time, duration_minutes')
+        .eq('user_id', user.id)
       
       if (error) throw error
       
@@ -134,7 +141,8 @@ export default function FrenchPage() {
         date: formData.date,
         new_vocabulary: vocabularyArray.length > 0 ? vocabularyArray : null,
         practice_sentences: sentencesArray.length > 0 ? sentencesArray : null,
-        mood: formData.mood
+        mood: formData.mood,
+        user_id: user.id
       }
       
       const { error } = await supabase
@@ -210,307 +218,309 @@ export default function FrenchPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">French Learning</h1>
-          <p className="text-gray-600 dark:text-gray-300 mt-2">Track your daily learning activities and progress</p>
+    <ProtectedRoute>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">French Learning</h1>
+            <p className="text-gray-600 dark:text-gray-300 mt-2">Track your daily learning activities and progress</p>
+          </div>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="btn-primary flex items-center space-x-2"
+          >
+            {showForm ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+            <span>{showForm ? 'Cancel' : 'Log Activity'}</span>
+          </button>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="btn-primary flex items-center space-x-2"
-        >
-          {showForm ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-          <span>{showForm ? 'Cancel' : 'Log Activity'}</span>
-        </button>
-      </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card p-6 dark:border dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Hours</div>
-              <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{stats.totalHours}h</div>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="card p-6 dark:border dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Total Hours</div>
+                <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{stats.totalHours}h</div>
+              </div>
+              <TrendingUp className="w-8 h-8 text-purple-400 dark:text-purple-300" />
             </div>
-            <TrendingUp className="w-8 h-8 text-purple-400 dark:text-purple-300" />
+          </div>
+          
+          <div className="card p-6 dark:border dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Current Streak</div>
+                <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{stats.currentStreak} days</div>
+              </div>
+              <Flame className="w-8 h-8 text-orange-400 dark:text-orange-300" />
+            </div>
+          </div>
+          
+          <div className="card p-6 dark:border dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Total Sessions</div>
+                <div className="text-3xl font-bold text-primary-600 dark:text-primary-400">{stats.totalSessions}</div>
+              </div>
+              <Calendar className="w-8 h-8 text-primary-400 dark:text-primary-300" />
+            </div>
+          </div>
+          
+          <div className="card p-6 dark:border dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Vocabulary Words</div>
+                <div className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.totalVocabulary}</div>
+              </div>
+              <BookOpen className="w-8 h-8 text-green-400 dark:text-green-300" />
+            </div>
           </div>
         </div>
-        
-        <div className="card p-6 dark:border dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Current Streak</div>
-              <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{stats.currentStreak} days</div>
-            </div>
-            <Flame className="w-8 h-8 text-orange-400 dark:text-orange-300" />
-          </div>
-        </div>
-        
-        <div className="card p-6 dark:border dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Sessions</div>
-              <div className="text-3xl font-bold text-primary-600 dark:text-primary-400">{stats.totalSessions}</div>
-            </div>
-            <Calendar className="w-8 h-8 text-primary-400 dark:text-primary-300" />
-          </div>
-        </div>
-        
-        <div className="card p-6 dark:border dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Vocabulary Words</div>
-              <div className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.totalVocabulary}</div>
-            </div>
-            <BookOpen className="w-8 h-8 text-green-400 dark:text-green-300" />
-          </div>
-        </div>
-      </div>
 
-      {/* Form */}
-      {showForm && (
-        <div className="card p-6 dark:border dark:border-gray-700">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Log Learning Activity</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="label">Activity Type *</label>
-                <select
-                  className="input-field"
-                  value={formData.activity_type}
-                  onChange={(e) => setFormData({ ...formData, activity_type: e.target.value })}
-                  required
-                >
-                  <option value="vocabulary">Vocabulary</option>
-                  <option value="grammar">Grammar</option>
-                  <option value="reading">Reading</option>
-                  <option value="listening">Listening</option>
-                  <option value="speaking">Speaking</option>
-                  <option value="writing">Writing</option>
-                  <option value="exercise">Exercise</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="label">Duration (minutes) *</label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  className="input-field"
-                  value={formData.duration_minutes}
-                  onChange={(e) => setFormData({ ...formData, duration_minutes: e.target.value })}
-                />
-              </div>
-              
-              <div>
-                <label className="label">Date *</label>
-                <input
-                  type="date"
-                  required
-                  className="input-field"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                />
-              </div>
-              
-              <div>
-                <label className="label">How did it go? *</label>
-                <select
-                  className="input-field"
-                  value={formData.mood}
-                  onChange={(e) => setFormData({ ...formData, mood: e.target.value })}
-                  required
-                >
-                  <option value="good">😊 Good - Felt confident</option>
-                  <option value="neutral">😐 Neutral - Okay progress</option>
-                  <option value="difficult">😓 Difficult - Challenging</option>
-                </select>
-              </div>
-            </div>
-            
-            <div>
-              <label className="label">New Vocabulary</label>
-              <input
-                type="text"
-                className="input-field"
-                placeholder="Enter words separated by commas (e.g., bonjour, merci, au revoir)"
-                value={formData.new_vocabulary}
-                onChange={(e) => setFormData({ ...formData, new_vocabulary: e.target.value })}
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Separate multiple words with commas</p>
-            </div>
-            
-            <div>
-              <label className="label">Practice Sentences</label>
-              <textarea
-                className="input-field"
-                rows="2"
-                placeholder="Enter sentences separated by commas"
-                value={formData.practice_sentences}
-                onChange={(e) => setFormData({ ...formData, practice_sentences: e.target.value })}
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Separate multiple sentences with commas</p>
-            </div>
-            
-            <div>
-              <label className="label">Notes</label>
-              <textarea
-                className="input-field"
-                rows="3"
-                placeholder="What did you learn or practice today?"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              />
-            </div>
-            
-            <div className="flex space-x-3">
-              <button type="submit" className="btn-primary">Log Activity</button>
-              <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Activities List */}
-      <div className="card p-6 dark:border dark:border-gray-700">
-        <h2 className="text-xl font-semibold mb-4 flex items-center space-x-2 text-gray-900 dark:text-white">
-          <Calendar className="w-5 h-5" />
-          <span>Recent Activities</span>
-        </h2>
-        {activities.length === 0 ? (
-          <div className="text-center py-12">
-            <Languages className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No activities yet</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">Start logging your French learning activities</p>
-            <button onClick={() => setShowForm(true)} className="btn-primary">
-              Log Your First Activity
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {activities.map((activity) => {
-              const displayDuration = activity.total_time !== undefined && activity.total_time !== null
-                ? activity.total_time
-                : activity.duration_minutes
-              
-              return (
-                <div key={activity.id} className="border-l-4 border-purple-500 dark:border-purple-400 pl-4 py-3 bg-gray-50 dark:bg-gray-700/50 rounded-r-lg">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <span className="font-semibold text-gray-900 dark:text-white capitalize">
-                          {activity.activity_type}
-                        </span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {displayDuration} min
-                        </span>
-                        <span className="text-sm text-gray-400 dark:text-gray-500">
-                          {new Date(activity.date).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric', 
-                            year: 'numeric' 
-                          })}
-                        </span>
-                        {activity.mood && (
-                          <span className={`text-lg ${getMoodColor(activity.mood)}`} title={activity.mood}>
-                            {getMoodEmoji(activity.mood)}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {activity.new_vocabulary && Array.isArray(activity.new_vocabulary) && activity.new_vocabulary.length > 0 && (
-                        <div className="mb-2">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <BookOpen className="w-4 h-4 text-green-600 dark:text-green-400" />
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">New Vocabulary ({activity.new_vocabulary.length}):</span>
-                          </div>
-                          <div className="flex flex-wrap gap-2 ml-6">
-                            {activity.new_vocabulary.map((word, idx) => (
-                              <span key={idx} className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full">
-                                {word}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {activity.practice_sentences && Array.isArray(activity.practice_sentences) && activity.practice_sentences.length > 0 && (
-                        <div className="mb-2">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Practice Sentences:</span>
-                          </div>
-                          <ul className="ml-6 space-y-1">
-                            {activity.practice_sentences.map((sentence, idx) => (
-                              <li key={idx} className="text-sm text-gray-600 dark:text-gray-300 italic">• {sentence}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      
-                      {activity.notes && (
-                        <p className="text-gray-600 dark:text-gray-300 text-sm mt-2">{activity.notes}</p>
-                      )}
-                    </div>
-                  </div>
+        {/* Form */}
+        {showForm && (
+          <div className="card p-6 dark:border dark:border-gray-700">
+            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Log Learning Activity</h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Activity Type *</label>
+                  <select
+                    className="input-field"
+                    value={formData.activity_type}
+                    onChange={(e) => setFormData({ ...formData, activity_type: e.target.value })}
+                    required
+                  >
+                    <option value="vocabulary">Vocabulary</option>
+                    <option value="grammar">Grammar</option>
+                    <option value="reading">Reading</option>
+                    <option value="listening">Listening</option>
+                    <option value="speaking">Speaking</option>
+                    <option value="writing">Writing</option>
+                    <option value="exercise">Exercise</option>
+                  </select>
                 </div>
-              )
-            })}
+                
+                <div>
+                  <label className="label">Duration (minutes) *</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    className="input-field"
+                    value={formData.duration_minutes}
+                    onChange={(e) => setFormData({ ...formData, duration_minutes: e.target.value })}
+                  />
+                </div>
+                
+                <div>
+                  <label className="label">Date *</label>
+                  <input
+                    type="date"
+                    required
+                    className="input-field"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  />
+                </div>
+                
+                <div>
+                  <label className="label">How did it go? *</label>
+                  <select
+                    className="input-field"
+                    value={formData.mood}
+                    onChange={(e) => setFormData({ ...formData, mood: e.target.value })}
+                    required
+                  >
+                    <option value="good">😊 Good - Felt confident</option>
+                    <option value="neutral">😐 Neutral - Okay progress</option>
+                    <option value="difficult">😓 Difficult - Challenging</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div>
+                <label className="label">New Vocabulary</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Enter words separated by commas (e.g., bonjour, merci, au revoir)"
+                  value={formData.new_vocabulary}
+                  onChange={(e) => setFormData({ ...formData, new_vocabulary: e.target.value })}
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Separate multiple words with commas</p>
+              </div>
+              
+              <div>
+                <label className="label">Practice Sentences</label>
+                <textarea
+                  className="input-field"
+                  rows="2"
+                  placeholder="Enter sentences separated by commas"
+                  value={formData.practice_sentences}
+                  onChange={(e) => setFormData({ ...formData, practice_sentences: e.target.value })}
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Separate multiple sentences with commas</p>
+              </div>
+              
+              <div>
+                <label className="label">Notes</label>
+                <textarea
+                  className="input-field"
+                  rows="3"
+                  placeholder="What did you learn or practice today?"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                />
+              </div>
+              
+              <div className="flex space-x-3">
+                <button type="submit" className="btn-primary">Log Activity</button>
+                <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
+              </div>
+            </form>
           </div>
         )}
-      </div>
 
-      {/* Learning Streak Visualization */}
-      {activities.length > 0 && (
+        {/* Activities List */}
         <div className="card p-6 dark:border dark:border-gray-700">
           <h2 className="text-xl font-semibold mb-4 flex items-center space-x-2 text-gray-900 dark:text-white">
-            <Flame className="w-5 h-5 text-orange-500" />
-            <span>7-Day Activity</span>
+            <Calendar className="w-5 h-5" />
+            <span>Recent Activities</span>
           </h2>
-          <div className="grid grid-cols-7 gap-2">
-            {Array.from({ length: 7 }).map((_, i) => {
-              const date = new Date()
-              date.setDate(date.getDate() - (6 - i))
-              const dateStr = date.toISOString().split('T')[0]
-              const dayActivities = activities.filter(a => a.date === dateStr)
-              const hasActivity = dayActivities.length > 0
-              const totalMinutes = dayActivities.reduce((sum, a) => {
-                const time = a.total_time !== undefined && a.total_time !== null ? a.total_time : a.duration_minutes
-                return sum + (time || 0)
-              }, 0)
-              
-              return (
-                <div key={i} className="text-center">
-                  <div 
-                    className={`h-20 rounded-lg flex items-center justify-center ${
-                      hasActivity ? 'bg-purple-500 dark:bg-purple-600 text-white font-semibold' : 'bg-gray-200 dark:bg-gray-700'
-                    }`}
-                    title={hasActivity ? `${totalMinutes} minutes` : 'No activity'}
-                  >
-                    {hasActivity && <span className="text-sm">{totalMinutes}m</span>}
+          {activities.length === 0 ? (
+            <div className="text-center py-12">
+              <Languages className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No activities yet</h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">Start logging your French learning activities</p>
+              <button onClick={() => setShowForm(true)} className="btn-primary">
+                Log Your First Activity
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {activities.map((activity) => {
+                const displayDuration = activity.total_time !== undefined && activity.total_time !== null
+                  ? activity.total_time
+                  : activity.duration_minutes
+                
+                return (
+                  <div key={activity.id} className="border-l-4 border-purple-500 dark:border-purple-400 pl-4 py-3 bg-gray-50 dark:bg-gray-700/50 rounded-r-lg">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <span className="font-semibold text-gray-900 dark:text-white capitalize">
+                            {activity.activity_type}
+                          </span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            {displayDuration} min
+                          </span>
+                          <span className="text-sm text-gray-400 dark:text-gray-500">
+                            {new Date(activity.date).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              year: 'numeric' 
+                            })}
+                          </span>
+                          {activity.mood && (
+                            <span className={`text-lg ${getMoodColor(activity.mood)}`} title={activity.mood}>
+                              {getMoodEmoji(activity.mood)}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {activity.new_vocabulary && Array.isArray(activity.new_vocabulary) && activity.new_vocabulary.length > 0 && (
+                          <div className="mb-2">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <BookOpen className="w-4 h-4 text-green-600 dark:text-green-400" />
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">New Vocabulary ({activity.new_vocabulary.length}):</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2 ml-6">
+                              {activity.new_vocabulary.map((word, idx) => (
+                                <span key={idx} className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full">
+                                  {word}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {activity.practice_sentences && Array.isArray(activity.practice_sentences) && activity.practice_sentences.length > 0 && (
+                          <div className="mb-2">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Practice Sentences:</span>
+                            </div>
+                            <ul className="ml-6 space-y-1">
+                              {activity.practice_sentences.map((sentence, idx) => (
+                                <li key={idx} className="text-sm text-gray-600 dark:text-gray-300 italic">• {sentence}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        {activity.notes && (
+                          <p className="text-gray-600 dark:text-gray-300 text-sm mt-2">{activity.notes}</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    {date.toLocaleDateString('en-US', { weekday: 'short' })}
-                  </div>
-                  <div className="text-xs text-gray-400 dark:text-gray-500">
-                    {date.getDate()}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-          {stats.currentStreak > 0 && (
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                Keep it up! You're on a <span className="font-bold text-orange-600 dark:text-orange-400">{stats.currentStreak}-day streak</span> 🔥
-              </p>
+                )
+              })}
             </div>
           )}
         </div>
-      )}
-    </div>
+
+        {/* Learning Streak Visualization */}
+        {activities.length > 0 && (
+          <div className="card p-6 dark:border dark:border-gray-700">
+            <h2 className="text-xl font-semibold mb-4 flex items-center space-x-2 text-gray-900 dark:text-white">
+              <Flame className="w-5 h-5 text-orange-500" />
+              <span>7-Day Activity</span>
+            </h2>
+            <div className="grid grid-cols-7 gap-2">
+              {Array.from({ length: 7 }).map((_, i) => {
+                const date = new Date()
+                date.setDate(date.getDate() - (6 - i))
+                const dateStr = date.toISOString().split('T')[0]
+                const dayActivities = activities.filter(a => a.date === dateStr)
+                const hasActivity = dayActivities.length > 0
+                const totalMinutes = dayActivities.reduce((sum, a) => {
+                  const time = a.total_time !== undefined && a.total_time !== null ? a.total_time : a.duration_minutes
+                  return sum + (time || 0)
+                }, 0)
+                
+                return (
+                  <div key={i} className="text-center">
+                    <div 
+                      className={`h-20 rounded-lg flex items-center justify-center ${
+                        hasActivity ? 'bg-purple-500 dark:bg-purple-600 text-white font-semibold' : 'bg-gray-200 dark:bg-gray-700'
+                      }`}
+                      title={hasActivity ? `${totalMinutes} minutes` : 'No activity'}
+                    >
+                      {hasActivity && <span className="text-sm">{totalMinutes}m</span>}
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                    </div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500">
+                      {date.getDate()}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            {stats.currentStreak > 0 && (
+              <div className="mt-4 text-center">
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Keep it up! You're on a <span className="font-bold text-orange-600 dark:text-orange-400">{stats.currentStreak}-day streak</span> 🔥
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </ProtectedRoute>
   )
 }
