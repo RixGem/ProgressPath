@@ -74,6 +74,7 @@ CRON_SECRET=your-secure-random-string  # Generate with: openssl rand -base64 32
 
 ```env
 TEST_SECRET=your-test-secret  # Defaults to CRON_SECRET if not set
+OPENROUTER_MODEL_ID=meta-llama/llama-3.1-8b-instruct:free  # AI model to use for quote generation
 ```
 
 ## Setup Instructions
@@ -130,14 +131,182 @@ CREATE POLICY "Allow service role all operations"
 - Cost: Free
 - Rate Limits: Reasonable for daily use
 
-### 3. Vercel Environment Variables
+### 3. AI Model Configuration (OPENROUTER_MODEL_ID)
+
+The `OPENROUTER_MODEL_ID` environment variable allows you to customize which AI model is used for generating daily quotes. This gives you flexibility to balance between cost, quality, and performance.
+
+#### What is OPENROUTER_MODEL_ID?
+
+This variable specifies the exact AI model that OpenRouter will use to generate quotes. Different models have different:
+- **Capabilities**: Some models are better at creative writing, multilingual content, or following instructions
+- **Costs**: Models range from free to premium pricing
+- **Speed**: Response times vary by model complexity
+- **Quality**: More advanced models typically produce higher quality outputs
+
+#### Default Model
+
+If you don't set this variable, the system uses:
+```env
+OPENROUTER_MODEL_ID=meta-llama/llama-3.1-8b-instruct:free
+```
+
+This is a free, high-quality model that works well for generating motivational quotes.
+
+#### How to Change Models
+
+To use a different model:
+
+1. **Browse Available Models**: Visit [OpenRouter Models](https://openrouter.ai/models)
+2. **Choose a Model**: Select based on your needs (see recommendations below)
+3. **Copy Model ID**: Each model has a unique identifier (e.g., `openai/gpt-4o`)
+4. **Update Environment Variable**: In Vercel or your `.env.local`:
+   ```env
+   OPENROUTER_MODEL_ID=openai/gpt-4o
+   ```
+5. **Redeploy**: Changes take effect on next deployment
+
+#### Recommended Models
+
+**For Best Quality (Paid):**
+
+| Model | ID | Cost | Best For |
+|-------|-----|------|----------|
+| GPT-4o | `openai/gpt-4o` | ~$0.005/request | Highest quality, best multilingual support |
+| Claude 3.5 Sonnet | `anthropic/claude-3.5-sonnet` | ~$0.003/request | Thoughtful, nuanced quotes |
+| GPT-4 Turbo | `openai/gpt-4-turbo` | ~$0.010/request | Premium quality, excellent reasoning |
+
+**For Free Tier:**
+
+| Model | ID | Cost | Best For |
+|-------|-----|------|----------|
+| Llama 3.1 8B | `meta-llama/llama-3.1-8b-instruct:free` | Free | Default choice, balanced performance |
+| Llama 3.1 70B | `meta-llama/llama-3.1-70b-instruct:free` | Free | Better quality than 8B, slightly slower |
+| Mistral 7B | `mistralai/mistral-7b-instruct:free` | Free | Fast, good for simple quotes |
+
+**For Budget-Conscious (Low-Cost):**
+
+| Model | ID | Cost | Best For |
+|-------|-----|------|----------|
+| GPT-3.5 Turbo | `openai/gpt-3.5-turbo` | ~$0.0005/request | Great balance of cost and quality |
+| Llama 3.1 70B | `meta-llama/llama-3.1-70b-instruct` | ~$0.0008/request | High quality at low cost |
+| Mixtral 8x7B | `mistralai/mixtral-8x7b-instruct` | ~$0.0007/request | Excellent value for money |
+
+#### Model Selection Guide
+
+**Choose based on your priorities:**
+
+1. **Free Forever**: Stick with `meta-llama/llama-3.1-8b-instruct:free`
+   - Good quality
+   - No cost
+   - Sufficient for daily quotes
+
+2. **Best Quality, Cost No Object**: Use `openai/gpt-4o`
+   - Premium quality quotes
+   - Excellent multilingual support
+   - ~$0.15/month for daily generation
+
+3. **Budget-Friendly Premium**: Use `openai/gpt-3.5-turbo`
+   - Significant quality improvement over free models
+   - Only ~$0.015/month
+   - Good multilingual capabilities
+
+4. **Best Free Option**: Use `meta-llama/llama-3.1-70b-instruct:free`
+   - Better than the 8B version
+   - Still completely free
+   - Slightly slower response time
+
+#### Testing Different Models
+
+To test a model before committing:
+
+```bash
+# Update the environment variable
+export OPENROUTER_MODEL_ID="openai/gpt-3.5-turbo"
+
+# Trigger a test generation
+curl -X POST https://your-app.vercel.app/api/test/daily-quotes \
+  -H "Authorization: Bearer YOUR_TEST_SECRET"
+
+# Review the generated quotes for quality
+curl https://your-app.vercel.app/api/test/daily-quotes | jq '.todayQuotes'
+```
+
+#### Model Performance Considerations
+
+**Response Time:**
+- Free models: 2-5 seconds
+- Paid models: 1-3 seconds
+- Premium models: 1-2 seconds
+
+**Quality Indicators:**
+- Quote relevance and depth
+- Multilingual accuracy
+- Translation quality
+- Author attribution correctness
+- JSON format compliance
+
+**Rate Limits:**
+- Free models: Usually 20-50 requests/minute
+- Paid models: Higher limits based on your plan
+- Check [OpenRouter documentation](https://openrouter.ai/docs) for specifics
+
+#### Example Configuration
+
+**Production Setup (Free):**
+```env
+OPENROUTER_MODEL_ID=meta-llama/llama-3.1-8b-instruct:free
+```
+
+**Production Setup (Premium):**
+```env
+OPENROUTER_MODEL_ID=openai/gpt-4o
+```
+
+**Development/Testing:**
+```env
+OPENROUTER_MODEL_ID=openai/gpt-3.5-turbo
+```
+
+#### Troubleshooting Model Issues
+
+**Issue: Model not found error**
+
+Make sure the model ID is correct. Check [OpenRouter Models](https://openrouter.ai/models) for valid IDs.
+
+**Issue: Rate limit exceeded**
+
+Free models have stricter rate limits. Consider:
+- Using a paid model
+- Adding retry logic
+- Scheduling cron jobs at different times
+
+**Issue: Poor quote quality**
+
+Try upgrading to a more capable model:
+- From 8B → 70B (free upgrade)
+- From free → GPT-3.5 Turbo (low-cost upgrade)
+- From any → GPT-4o (premium upgrade)
+
+**Issue: Cost concerns**
+
+Estimate monthly costs:
+```
+Daily generations: 1
+Quotes per generation: 30
+Model cost per request: $0.0005 (GPT-3.5)
+Monthly cost: 30 days × $0.0005 = $0.015/month
+```
+
+Most paid models cost less than $0.20/month for daily quote generation.
+
+### 4. Vercel Environment Variables
 
 1. Go to your Vercel project dashboard
 2. Navigate to Settings → Environment Variables
 3. Add all required environment variables
 4. Make sure to add them for Production, Preview, and Development environments
 
-### 4. Generate Secure Secrets
+### 5. Generate Secure Secrets
 
 ```bash
 # Generate CRON_SECRET
@@ -147,7 +316,7 @@ openssl rand -base64 32
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
-### 5. Deploy to Vercel
+### 6. Deploy to Vercel
 
 The `vercel.json` configuration automatically sets up the cron job.
 
@@ -408,6 +577,24 @@ Frontend component caches quotes in `sessionStorage`:
 | Supabase Database | Free tier (500 MB) | $0/month |
 | **Total** | | **$0/month** |
 
+**Premium option with GPT-4o:**
+
+| Service | Tier | Cost |
+|---------|------|------|
+| OpenRouter API | GPT-4o | ~$0.15/month |
+| Vercel Cron Jobs | Free on all plans | $0/month |
+| Supabase Database | Free tier (500 MB) | $0/month |
+| **Total** | | **~$0.15/month** |
+
+**Budget option with GPT-3.5:**
+
+| Service | Tier | Cost |
+|---------|------|------|
+| OpenRouter API | GPT-3.5 Turbo | ~$0.015/month |
+| Vercel Cron Jobs | Free on all plans | $0/month |
+| Supabase Database | Free tier (500 MB) | $0/month |
+| **Total** | | **~$0.015/month** |
+
 ## Future Enhancements
 
 1. **User Language Preferences**: Filter quotes by preferred language
@@ -418,6 +605,8 @@ Frontend component caches quotes in `sessionStorage`:
 6. **Social Sharing**: Share quotes with translations
 7. **Historical Archive**: Keep all quotes in archive table
 8. **Analytics**: Track popular languages and quotes
+9. **A/B Testing Models**: Compare quote quality across different AI models
+10. **Custom Model Training**: Fine-tune models for specific quote styles
 
 ---
 
