@@ -41,14 +41,27 @@ export default function Navigation() {
     <nav className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-50 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-primary-600 dark:bg-primary-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">P</span>
+          {/* Brand Logo and Title - Mobile Responsive */}
+          <Link href="/" className="flex items-center space-x-2 flex-shrink-0 min-w-0">
+            <div className="w-8 h-8 bg-primary-600 dark:bg-primary-500 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold text-xl">✦</span>
             </div>
-            <span className="text-xl font-bold text-gray-900 dark:text-white">Chris's Learning Goal</span>
+            {/* Full text on larger screens */}
+            <span className="hidden md:inline text-xl font-bold text-gray-900 dark:text-white whitespace-nowrap">
+              Chris's Learning Goal
+            </span>
+            {/* Abbreviated text on small screens */}
+            <span className="inline md:hidden text-lg font-bold text-gray-900 dark:text-white whitespace-nowrap">
+              Chris's Goal
+            </span>
+            {/* Very small screens - even shorter */}
+            <span className="hidden xs:hidden text-base font-semibold text-gray-900 dark:text-white">
+              Goal
+            </span>
           </Link>
 
-          <div className="flex items-center space-x-2">
+          {/* Navigation Items and Actions */}
+          <div className="flex items-center space-x-1 sm:space-x-2">
             <div className="flex space-x-1">
               {navItems.map((item) => {
                 const Icon = item.icon
@@ -57,11 +70,12 @@ export default function Navigation() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 ${
+                    className={`flex items-center space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 ${
                       isActive
                         ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-medium'
                         : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
                     }`}
+                    title={item.label}
                   >
                     <Icon className="w-5 h-5" />
                     <span className="hidden sm:inline">{item.label}</span>
@@ -77,7 +91,7 @@ export default function Navigation() {
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="flex items-center space-x-2 px-4 py-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center space-x-2 px-2 sm:px-4 py-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Sign out"
               >
                 <LogOut className="w-4 h-4" />

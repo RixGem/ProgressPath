@@ -7,8 +7,8 @@ import Script from 'next/script'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: "ProgressPath - Learning Tracker",
-  description: "Track your learning progress across books and languages with ProgressPath",
+  title: "Chris's Learning Goal - Track Your Progress",
+  description: "Chris's personalized learning tracker for books, languages, and educational progress. Monitor your learning journey and achieve your goals.",
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
@@ -28,7 +28,7 @@ export const metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'ProgressPath',
+    title: "Chris's Learning Goal",
   },
 }
 
