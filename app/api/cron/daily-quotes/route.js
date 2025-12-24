@@ -18,6 +18,7 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 
 /**
  * Generate 30 motivational quotes using OpenRouter API
+ * Generates multilingual quotes with translations
  * @returns {Promise<Array>} Array of quote objects
  */
 async function generateQuotes() {
@@ -41,15 +42,49 @@ async function generateQuotes() {
         messages: [
           {
             role: 'system',
-            content: 'You are a motivational quote generator. Generate exactly 30 unique, inspiring, and meaningful quotes about learning, growth, perseverance, success, and personal development. Each quote should be original, concise (under 150 characters), and attributed to a relevant author or source. Format your response as a JSON array of objects with "text" and "author" properties.'
+            content: `You are a multilingual motivational quote generator. Generate exactly 30 unique, inspiring quotes about learning, growth, perseverance, success, and personal development. 
+
+Include quotes in multiple languages (English, Chinese, French, Spanish, etc.) to provide diverse cultural perspectives.
+
+IMPORTANT OUTPUT FORMAT:
+- Return ONLY a valid JSON array
+- Each quote object MUST have these exact fields:
+  * "quote": the quote text in its original language
+  * "author": the author's name
+  * "language": ISO 639-1 language code (en, zh, fr, es, etc.)
+  * "translation": English translation (null if quote is already in English)
+
+Example format:
+[
+  {
+    "quote": "学习之路没有尽头，只有新的起点",
+    "author": "林语堂",
+    "language": "zh",
+    "translation": null
+  },
+  {
+    "quote": "La vie est un mystère qu'il faut vivre, et non un problème à résoudre",
+    "author": "Gandhi",
+    "language": "fr",
+    "translation": "生活是一个需要体验的奥秘，而非一个需要解决的问题"
+  },
+  {
+    "quote": "Education is the most powerful weapon which you can use to change the world",
+    "author": "Nelson Mandela",
+    "language": "en",
+    "translation": null
+  }
+]
+
+Generate a diverse mix: ~60% English, ~15% Chinese, ~15% French, ~10% other languages.`
           },
           {
             role: 'user',
-            content: 'Generate 30 motivational quotes in JSON format: [{"text": "quote text", "author": "Author Name"}, ...]'
+            content: 'Generate 30 multilingual motivational quotes in the exact JSON format specified. Include language and translation fields for each quote.'
           }
         ],
         temperature: 0.9,
-        max_tokens: 2000
+        max_tokens: 3000
       })
     });
 
@@ -79,6 +114,13 @@ async function generateQuotes() {
       throw new Error(`Expected 30 quotes, got ${quotes?.length || 0}`);
     }
 
+    // Validate quote structure
+    for (const quote of quotes) {
+      if (!quote.quote || !quote.author || !quote.language) {
+        throw new Error('Invalid quote structure: missing required fields');
+      }
+    }
+
     return quotes.slice(0, 30); // Ensure exactly 30 quotes
   } catch (error) {
     console.error('Error generating quotes:', error);
@@ -97,7 +139,7 @@ async function deletePreviousQuotes() {
     const { data, error, count } = await supabaseAdmin
       .from('daily_quotes')
       .delete()
-      .neq('created_date', today)
+      .neq('day_id', today)
       .select('id', { count: 'exact' });
 
     if (error) {
@@ -121,12 +163,12 @@ async function insertNewQuotes(quotes) {
   try {
     const today = new Date().toISOString().split('T')[0];
     
-    const quotesWithDate = quotes.map((quote, index) => ({
-      text: quote.text,
+    const quotesWithDate = quotes.map((quote) => ({
+      quote: quote.quote,
       author: quote.author,
-      created_date: today,
-      order_index: index + 1,
-      is_active: true
+      language: quote.language || 'en',
+      translation: quote.translation || null,
+      day_id: today
     }));
 
     const { data, error } = await supabaseAdmin
@@ -169,7 +211,7 @@ export async function GET(request) {
     console.log('🚀 Starting daily quote generation cron job...');
 
     // Step 1: Generate new quotes
-    console.log('📝 Generating 30 new quotes...');
+    console.log('📝 Generating 30 new multilingual quotes...');
     const quotes = await generateQuotes();
     console.log(`✅ Generated ${quotes.length} quotes`);
 
