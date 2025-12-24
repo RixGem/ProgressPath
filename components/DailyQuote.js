@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
 
-// Fallback quotes in case API fails
+// Fallback quotes in case Supabase query fails
 const fallbackQuotes = [
   // Personal Growth (7 quotes)
   {
@@ -106,43 +107,54 @@ export default function DailyQuote() {
           return
         }
 
-        // Fetch from Zen Quotes API
+        // Fetch random quote from Supabase daily_quotes table
         setIsLoading(true)
         setError(null)
         
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+        // Get total count of quotes
+        const { count, error: countError } = await supabase
+          .from('daily_quotes')
+          .select('*', { count: 'exact', head: true })
         
-        const response = await fetch('https://zenquotes.io/api/random', {
-          signal: controller.signal,
-          cache: 'no-store'
-        })
-        
-        clearTimeout(timeoutId)
-        
-        if (!response.ok) {
-          throw new Error('API request failed')
+        if (countError) {
+          throw new Error(`Failed to get quote count: ${countError.message}`)
         }
         
-        const data = await response.json()
+        if (!count || count === 0) {
+          throw new Error('No quotes available in database')
+        }
         
-        if (data && data[0]) {
-          const apiQuote = {
-            text: data[0].q,
-            author: data[0].a
+        // Generate random offset
+        const randomOffset = Math.floor(Math.random() * count)
+        
+        // Fetch a random quote using offset
+        const { data, error: fetchError } = await supabase
+          .from('daily_quotes')
+          .select('quote_text, author')
+          .range(randomOffset, randomOffset)
+          .single()
+        
+        if (fetchError) {
+          throw new Error(`Failed to fetch quote: ${fetchError.message}`)
+        }
+        
+        if (data) {
+          const supabaseQuote = {
+            text: data.quote_text,
+            author: data.author
           }
           
           // Cache the quote for this session
-          sessionStorage.setItem(CACHE_KEY, JSON.stringify(apiQuote))
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify(supabaseQuote))
           sessionStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString())
           
-          setQuote(apiQuote)
+          setQuote(supabaseQuote)
           setIsLoading(false)
         } else {
-          throw new Error('Invalid API response')
+          throw new Error('Invalid database response')
         }
       } catch (err) {
-        console.error('Error fetching quote from API:', err)
+        console.error('Error fetching quote from Supabase:', err)
         setError(err.message)
         
         // Fall back to local quotes
