@@ -44,7 +44,7 @@ export default function Navigation() {
           {/* Brand Logo and Title - Mobile Responsive */}
           <Link href="/" className="flex items-center space-x-2 flex-shrink-0 min-w-0">
             <div className="w-8 h-8 bg-primary-600 dark:bg-primary-500 rounded-lg flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-xl">C</span>
+              <span className="text-white font-bold text-xl">✦</span>
             </div>
             {/* Full text on larger screens */}
             <span className="hidden md:inline text-xl font-bold text-gray-900 dark:text-white whitespace-nowrap">
