@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { validateFrenchLearningData, validateUser } from '../../lib/validation'
 import { Languages, Plus, Calendar, TrendingUp, X, BookOpen, MessageSquare, Smile, Flame } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import { useAuth } from '../../contexts/AuthContext'
@@ -86,6 +87,9 @@ export default function FrenchPage() {
 
   async function fetchActivities() {
     try {
+      // Validate user before making database query
+      validateUser(user)
+
       const { data, error } = await supabase
         .from('french_learning')
         .select('*')
@@ -101,6 +105,9 @@ export default function FrenchPage() {
       }
     } catch (error) {
       console.error('Error fetching activities:', error)
+      if (error.message.includes('Authentication required')) {
+        alert('Please log in to view your activities.')
+      }
     } finally {
       setLoading(false)
     }
@@ -152,6 +159,9 @@ export default function FrenchPage() {
 
   async function fetchTotalTime() {
     try {
+      // Validate user before making database query
+      validateUser(user)
+
       const { data, error } = await supabase
         .from('french_learning')
         .select('total_time, duration_minutes')
@@ -175,33 +185,15 @@ export default function FrenchPage() {
   async function handleSubmit(e) {
     e.preventDefault()
     try {
-      const durationMinutes = parseInt(formData.duration_minutes)
-      
-      const vocabularyArray = formData.new_vocabulary
-        .split(',')
-        .map(v => v.trim())
-        .filter(v => v.length > 0)
-      
-      const sentencesArray = formData.practice_sentences
-        .split(',')
-        .map(s => s.trim())
-        .filter(s => s.length > 0)
-      
-      const insertData = {
-        activity_type: formData.activity_type,
-        duration_minutes: durationMinutes,
-        total_time: durationMinutes,
-        notes: formData.notes,
-        date: formData.date,
-        new_vocabulary: vocabularyArray.length > 0 ? vocabularyArray : null,
-        practice_sentences: sentencesArray.length > 0 ? sentencesArray : null,
-        mood: formData.mood,
-        user_id: user.id
-      }
+      // Validate user authentication
+      validateUser(user)
+
+      // Validate and sanitize activity data
+      const validatedData = validateFrenchLearningData(formData, user.id)
       
       const { error } = await supabase
         .from('french_learning')
-        .insert([insertData])
+        .insert([validatedData])
         
       if (error) throw error
       
@@ -210,7 +202,17 @@ export default function FrenchPage() {
       fetchTotalTime()
     } catch (error) {
       console.error('Error saving activity:', error)
-      alert('Error saving activity: ' + error.message)
+      
+      // User-friendly error messages
+      if (error.message.includes('Authentication required')) {
+        alert('Please log in to save activities.')
+      } else if (error.message.includes('Activity type is required')) {
+        alert('Please select an activity type.')
+      } else if (error.message.includes('Duration is required')) {
+        alert('Please enter a duration.')
+      } else {
+        alert('Error saving activity: ' + error.message)
+      }
     }
   }
 
