@@ -5,18 +5,20 @@
 -- populates it with initial inspirational quotes
 -- =====================================================
 
--- Create the daily_quotes table
+-- Create the daily_quotes table with language and translation support
 CREATE TABLE IF NOT EXISTS daily_quotes (
-  id SERIAL PRIMARY KEY,
-  quote_text TEXT NOT NULL,
-  author VARCHAR(255) NOT NULL,
-  category VARCHAR(100),
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  quote TEXT NOT NULL,
+  author TEXT NOT NULL,
+  language TEXT NOT NULL DEFAULT 'en',
+  translation TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  day_id TEXT NOT NULL
 );
 
--- Create index for better query performance
-CREATE INDEX IF NOT EXISTS idx_daily_quotes_category ON daily_quotes(category);
+-- Create indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_daily_quotes_day_id ON daily_quotes(day_id);
+CREATE INDEX IF NOT EXISTS idx_daily_quotes_language ON daily_quotes(language);
 
 -- Enable Row Level Security
 ALTER TABLE daily_quotes ENABLE ROW LEVEL SECURITY;
@@ -28,91 +30,55 @@ CREATE POLICY "Allow public read access"
   FOR SELECT
   USING (true);
 
--- Optional: Create policy for authenticated users to insert/update
--- DROP POLICY IF EXISTS "Allow authenticated insert" ON daily_quotes;
--- CREATE POLICY "Allow authenticated insert"
---   ON daily_quotes
---   FOR INSERT
---   TO authenticated
---   WITH CHECK (true);
+-- Create policy for service role full access
+DROP POLICY IF EXISTS "Allow service role all operations" ON daily_quotes;
+CREATE POLICY "Allow service role all operations"
+  ON daily_quotes
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
 
 -- =====================================================
--- Insert Initial Quotes
+-- Insert Initial Quotes (Mixed Languages)
 -- =====================================================
 
 -- Clear existing quotes (optional, comment out if you want to keep existing)
--- TRUNCATE TABLE daily_quotes RESTART IDENTITY;
+-- TRUNCATE TABLE daily_quotes;
 
--- Insert Personal Growth Quotes
-INSERT INTO daily_quotes (quote_text, author, category) VALUES
-  ('The only way to do great work is to love what you do.', 'Steve Jobs', 'Personal Growth'),
-  ('Success is not final, failure is not fatal: it is the courage to continue that counts.', 'Winston Churchill', 'Personal Growth'),
-  ('Believe you can and you''re halfway there.', 'Theodore Roosevelt', 'Personal Growth'),
-  ('The future belongs to those who believe in the beauty of their dreams.', 'Eleanor Roosevelt', 'Personal Growth'),
-  ('It does not matter how slowly you go as long as you do not stop.', 'Confucius', 'Personal Growth'),
-  ('Everything you''ve ever wanted is on the other side of fear.', 'George Addair', 'Personal Growth'),
-  ('The only impossible journey is the one you never begin.', 'Tony Robbins', 'Personal Growth'),
-  ('Don''t watch the clock; do what it does. Keep going.', 'Sam Levenson', 'Personal Growth'),
-  ('The secret of getting ahead is getting started.', 'Mark Twain', 'Personal Growth'),
-  ('Believe in yourself and all that you are.', 'Christian D. Larson', 'Personal Growth')
-ON CONFLICT DO NOTHING;
+-- Get today's day_id
+DO $$
+DECLARE
+  today_id TEXT := TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD');
+BEGIN
+  -- Insert English quotes
+  INSERT INTO daily_quotes (quote, author, language, translation, day_id) VALUES
+    ('The only way to do great work is to love what you do.', 'Steve Jobs', 'en', NULL, today_id),
+    ('Success is not final, failure is not fatal: it is the courage to continue that counts.', 'Winston Churchill', 'en', NULL, today_id),
+    ('Believe you can and you''re halfway there.', 'Theodore Roosevelt', 'en', NULL, today_id),
+    ('The future belongs to those who believe in the beauty of their dreams.', 'Eleanor Roosevelt', 'en', NULL, today_id),
+    ('It does not matter how slowly you go as long as you do not stop.', 'Confucius', 'en', NULL, today_id)
+  ON CONFLICT DO NOTHING;
 
--- Insert Learning Quotes
-INSERT INTO daily_quotes (quote_text, author, category) VALUES
-  ('Education is the most powerful weapon which you can use to change the world.', 'Nelson Mandela', 'Learning'),
-  ('The beautiful thing about learning is that no one can take it away from you.', 'B.B. King', 'Learning'),
-  ('Live as if you were to die tomorrow. Learn as if you were to live forever.', 'Mahatma Gandhi', 'Learning'),
-  ('The capacity to learn is a gift; the ability to learn is a skill; the willingness to learn is a choice.', 'Brian Herbert', 'Learning'),
-  ('Learning never exhausts the mind.', 'Leonardo da Vinci', 'Learning'),
-  ('An investment in knowledge pays the best interest.', 'Benjamin Franklin', 'Learning'),
-  ('The expert in anything was once a beginner.', 'Helen Hayes', 'Learning'),
-  ('The more that you read, the more things you will know. The more that you learn, the more places you''ll go.', 'Dr. Seuss', 'Learning'),
-  ('Develop a passion for learning. If you do, you will never cease to grow.', 'Anthony J. D''Angelo', 'Learning'),
-  ('Education is not the filling of a pail, but the lighting of a fire.', 'William Butler Yeats', 'Learning')
-ON CONFLICT DO NOTHING;
+  -- Insert Chinese quotes with English translations
+  INSERT INTO daily_quotes (quote, author, language, translation, day_id) VALUES
+    ('学习之路没有尽头，只有新的起点', '林语堂', 'zh', NULL, today_id),
+    ('千里之行，始于足下', '老子', 'zh', 'A journey of a thousand miles begins with a single step', today_id),
+    ('温故而知新，可以为师矣', '孔子', 'zh', 'Reviewing what you have learned and learning anew, you are fit to be a teacher', today_id)
+  ON CONFLICT DO NOTHING;
 
--- Insert Philosophy Quotes
-INSERT INTO daily_quotes (quote_text, author, category) VALUES
-  ('The unexamined life is not worth living.', 'Socrates', 'Philosophy'),
-  ('I think, therefore I am.', 'René Descartes', 'Philosophy'),
-  ('He who has a why to live can bear almost any how.', 'Friedrich Nietzsche', 'Philosophy'),
-  ('The only true wisdom is in knowing you know nothing.', 'Socrates', 'Philosophy'),
-  ('To be yourself in a world that is constantly trying to make you something else is the greatest accomplishment.', 'Ralph Waldo Emerson', 'Philosophy'),
-  ('We are what we repeatedly do. Excellence, then, is not an act, but a habit.', 'Aristotle', 'Philosophy'),
-  ('The mind is everything. What you think you become.', 'Buddha', 'Philosophy'),
-  ('Life is what happens when you''re busy making other plans.', 'John Lennon', 'Philosophy')
-ON CONFLICT DO NOTHING;
+  -- Insert French quotes with translations
+  INSERT INTO daily_quotes (quote, author, language, translation, day_id) VALUES
+    ('La vie est un mystère qu''il faut vivre, et non un problème à résoudre', 'Gandhi', 'fr', '生活是一个需要体验的奥秘，而非一个需要解决的问题', today_id),
+    ('Tout ce qui mérite d''être fait mérite d''être bien fait', 'Philip Stanhope', 'fr', 'Whatever is worth doing at all is worth doing well', today_id)
+  ON CONFLICT DO NOTHING;
 
--- Insert Motivation Quotes
-INSERT INTO daily_quotes (quote_text, author, category) VALUES
-  ('The way to get started is to quit talking and begin doing.', 'Walt Disney', 'Motivation'),
-  ('Don''t let yesterday take up too much of today.', 'Will Rogers', 'Motivation'),
-  ('You learn more from failure than from success. Don''t let it stop you. Failure builds character.', 'Unknown', 'Motivation'),
-  ('It''s not whether you get knocked down, it''s whether you get up.', 'Vince Lombardi', 'Motivation'),
-  ('If you are working on something that you really care about, you don''t have to be pushed. The vision pulls you.', 'Steve Jobs', 'Motivation'),
-  ('People who are crazy enough to think they can change the world, are the ones who do.', 'Rob Siltanen', 'Motivation'),
-  ('Failure will never overtake me if my determination to succeed is strong enough.', 'Og Mandino', 'Motivation'),
-  ('We may encounter many defeats but we must not be defeated.', 'Maya Angelou', 'Motivation')
-ON CONFLICT DO NOTHING;
-
--- Insert Success Quotes
-INSERT INTO daily_quotes (quote_text, author, category) VALUES
-  ('Success is not the key to happiness. Happiness is the key to success.', 'Albert Schweitzer', 'Success'),
-  ('Success usually comes to those who are too busy to be looking for it.', 'Henry David Thoreau', 'Success'),
-  ('The road to success and the road to failure are almost exactly the same.', 'Colin R. Davis', 'Success'),
-  ('Success is walking from failure to failure with no loss of enthusiasm.', 'Winston Churchill', 'Success'),
-  ('The only place where success comes before work is in the dictionary.', 'Vidal Sassoon', 'Success'),
-  ('Don''t be afraid to give up the good to go for the great.', 'John D. Rockefeller', 'Success')
-ON CONFLICT DO NOTHING;
-
--- Insert Creativity Quotes
-INSERT INTO daily_quotes (quote_text, author, category) VALUES
-  ('Creativity is intelligence having fun.', 'Albert Einstein', 'Creativity'),
-  ('The desire to create is one of the deepest yearnings of the human soul.', 'Dieter F. Uchtdorf', 'Creativity'),
-  ('Creativity takes courage.', 'Henri Matisse', 'Creativity'),
-  ('The chief enemy of creativity is good sense.', 'Pablo Picasso', 'Creativity'),
-  ('Every artist was first an amateur.', 'Ralph Waldo Emerson', 'Creativity')
-ON CONFLICT DO NOTHING;
+  -- Insert Spanish quotes
+  INSERT INTO daily_quotes (quote, author, language, translation, day_id) VALUES
+    ('El éxito es la suma de pequeños esfuerzos repetidos día tras día', 'Robert Collier', 'es', 'Success is the sum of small efforts repeated day in and day out', today_id),
+    ('La educación es el arma más poderosa que puedes usar para cambiar el mundo', 'Nelson Mandela', 'es', 'Education is the most powerful weapon you can use to change the world', today_id)
+  ON CONFLICT DO NOTHING;
+END $$;
 
 -- =====================================================
 -- Verify Installation
@@ -121,53 +87,61 @@ ON CONFLICT DO NOTHING;
 -- Count total quotes
 SELECT COUNT(*) as total_quotes FROM daily_quotes;
 
--- Count quotes by category
-SELECT category, COUNT(*) as count 
+-- Count quotes by language
+SELECT language, COUNT(*) as count 
 FROM daily_quotes 
-GROUP BY category 
+GROUP BY language 
 ORDER BY count DESC;
 
 -- Display sample quotes
-SELECT id, LEFT(quote_text, 50) || '...' as quote_preview, author, category 
+SELECT id, LEFT(quote, 50) || '...' as quote_preview, author, language, 
+       CASE WHEN translation IS NOT NULL THEN 'Yes' ELSE 'No' END as has_translation
 FROM daily_quotes 
-ORDER BY category, id 
+ORDER BY language, id 
 LIMIT 10;
 
 -- =====================================================
 -- Useful Queries for Management
 -- =====================================================
 
--- Get a random quote (same method used by the component)
--- SELECT quote_text, author FROM daily_quotes 
+-- Get a random quote
+-- SELECT quote, author, language, translation FROM daily_quotes 
 -- ORDER BY RANDOM() 
 -- LIMIT 1;
 
--- Get random quote by category
--- SELECT quote_text, author FROM daily_quotes 
--- WHERE category = 'Learning'
+-- Get quotes for today
+-- SELECT quote, author, language, translation FROM daily_quotes 
+-- WHERE day_id = TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD')
+-- ORDER BY created_at;
+
+-- Get random quote by language
+-- SELECT quote, author, language, translation FROM daily_quotes 
+-- WHERE language = 'zh'
 -- ORDER BY RANDOM() 
 -- LIMIT 1;
 
 -- Add a new quote
--- INSERT INTO daily_quotes (quote_text, author, category) 
--- VALUES ('Your new quote here', 'Author Name', 'Category');
+-- INSERT INTO daily_quotes (quote, author, language, translation, day_id) 
+-- VALUES ('Your new quote here', 'Author Name', 'en', NULL, TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD'));
 
 -- Update a quote
 -- UPDATE daily_quotes 
--- SET quote_text = 'Updated quote text', updated_at = NOW()
--- WHERE id = 1;
+-- SET quote = 'Updated quote text', translation = 'Updated translation'
+-- WHERE id = 'your-uuid-here';
 
--- Delete a quote
--- DELETE FROM daily_quotes WHERE id = 1;
+-- Delete quotes for a specific day
+-- DELETE FROM daily_quotes WHERE day_id = '2025-12-24';
 
 -- =====================================================
 -- Notes
 -- =====================================================
 -- 
 -- 1. This script can be run in the Supabase SQL Editor
--- 2. The table will be created with ~50 initial quotes
+-- 2. The table uses UUID for primary keys
 -- 3. Row Level Security ensures public read access
--- 4. Categories are optional but helpful for future filtering
--- 5. Add more quotes anytime via INSERT statements or Supabase UI
+-- 4. day_id tracks which day the quotes belong to (format: YYYY-MM-DD)
+-- 5. language field: 'en', 'zh', 'fr', 'es', etc.
+-- 6. translation field: optional, can be in any language
+-- 7. Service role has full access for automated operations
 --
 -- =====================================================
