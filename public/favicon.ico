@@ -1,0 +1,14 @@
+PLACEHOLDER: This file should be replaced with an actual favicon.ico image file.
+
+This is a temporary placeholder for the favicon. To add the actual favicon:
+1. Create or obtain a favicon.ico file (16x16 or 32x32 pixels recommended)
+2. Replace this file with the actual binary favicon image
+3. The favicon should be in ICO format for maximum browser compatibility
+
+Note: Binary files like images cannot be uploaded directly via GitHub API.
+Please replace this placeholder with the actual favicon.ico file through:
+- GitHub web interface (upload file)
+- Git command line (git add, commit, push)
+- Or any other Git client
+
+Created on: December 23, 2025
