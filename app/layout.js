@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import Navigation from '../components/Navigation'
 import { AuthProvider } from '../contexts/AuthContext'
 import Script from 'next/script'
+import { Analytics } from '@vercel/analytics/next'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -91,6 +92,7 @@ export default function RootLayout({ children }) {
             </main>
           </div>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   )
