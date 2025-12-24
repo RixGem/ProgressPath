@@ -2,7 +2,7 @@
 
 ## Overview
 
-This feature implements automated daily quote generation using Vercel Cron Jobs, OpenRouter AI API, and Supabase database. Every day at midnight UTC, the system automatically generates 30 fresh motivational quotes and updates the database.
+This feature implements automated daily quote generation using Vercel Cron Jobs, OpenRouter AI API, and Supabase database. Every day at midnight UTC, the system automatically generates 30 fresh motivational quotes in multiple languages and updates the database.
 
 ## Architecture
 
@@ -11,7 +11,7 @@ This feature implements automated daily quote generation using Vercel Cron Jobs,
 1. **Cron Job Endpoint** (`/app/api/cron/daily-quotes/route.js`)
    - Main automated endpoint triggered by Vercel Cron
    - Runs daily at midnight (0 0 * * *)
-   - Handles quote generation, deletion, and insertion
+   - Handles multilingual quote generation, deletion, and insertion
 
 2. **Test Endpoint** (`/app/api/test/daily-quotes/route.js`)
    - Manual testing and verification endpoint
@@ -19,28 +19,36 @@ This feature implements automated daily quote generation using Vercel Cron Jobs,
    - POST: Manually trigger quote generation
 
 3. **Database Table** (`daily_quotes`)
-   - Stores generated quotes with metadata
-   - Tracks creation date and order
+   - Stores generated quotes with multilingual support
+   - Tracks language and optional translations
 
 ## Database Schema
 
 ```sql
 CREATE TABLE daily_quotes (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  text TEXT NOT NULL,
-  author VARCHAR(255) NOT NULL,
-  created_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  order_index INTEGER NOT NULL,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  quote TEXT NOT NULL,
+  author TEXT NOT NULL,
+  language TEXT NOT NULL DEFAULT 'en',
+  translation TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  day_id TEXT NOT NULL
 );
 
 -- Indexes for performance
-CREATE INDEX idx_daily_quotes_date ON daily_quotes(created_date);
-CREATE INDEX idx_daily_quotes_active ON daily_quotes(is_active);
-CREATE INDEX idx_daily_quotes_order ON daily_quotes(order_index);
+CREATE INDEX idx_daily_quotes_day_id ON daily_quotes(day_id);
+CREATE INDEX idx_daily_quotes_language ON daily_quotes(language);
 ```
+
+### Field Descriptions
+
+- **id**: Unique UUID identifier
+- **quote**: The quote text in its original language
+- **author**: The author's name
+- **language**: ISO 639-1 language code (en, zh, fr, es, etc.)
+- **translation**: Optional translation (typically to English or Chinese)
+- **created_at**: Timestamp when the quote was created
+- **day_id**: Date identifier (YYYY-MM-DD format) to track which day the quotes belong to
 
 ## Environment Variables
 
@@ -75,22 +83,20 @@ TEST_SECRET=your-test-secret  # Defaults to CRON_SECRET if not set
 **Create the table in Supabase:**
 
 ```sql
--- Create the daily_quotes table
+-- Create the daily_quotes table with multilingual support
 CREATE TABLE daily_quotes (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  text TEXT NOT NULL,
-  author VARCHAR(255) NOT NULL,
-  created_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  order_index INTEGER NOT NULL,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  quote TEXT NOT NULL,
+  author TEXT NOT NULL,
+  language TEXT NOT NULL DEFAULT 'en',
+  translation TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  day_id TEXT NOT NULL
 );
 
 -- Add indexes
-CREATE INDEX idx_daily_quotes_date ON daily_quotes(created_date);
-CREATE INDEX idx_daily_quotes_active ON daily_quotes(is_active);
-CREATE INDEX idx_daily_quotes_order ON daily_quotes(order_index);
+CREATE INDEX idx_daily_quotes_day_id ON daily_quotes(day_id);
+CREATE INDEX idx_daily_quotes_language ON daily_quotes(language);
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE daily_quotes ENABLE ROW LEVEL SECURITY;
@@ -100,7 +106,7 @@ CREATE POLICY "Allow public read access"
   ON daily_quotes
   FOR SELECT
   TO public
-  USING (is_active = true);
+  USING (true);
 
 -- Allow service role full access
 CREATE POLICY "Allow service role all operations"
@@ -128,13 +134,7 @@ CREATE POLICY "Allow service role all operations"
 
 1. Go to your Vercel project dashboard
 2. Navigate to Settings → Environment Variables
-3. Add all required environment variables:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `OPENROUTER_API_KEY`
-   - `NEXT_PUBLIC_APP_URL`
-   - `CRON_SECRET`
+3. Add all required environment variables
 4. Make sure to add them for Production, Preview, and Development environments
 
 ### 4. Generate Secure Secrets
@@ -149,19 +149,50 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 ### 5. Deploy to Vercel
 
-```bash
-# Deploy the branch
-git push origin feature/daily-quotes-cron
+The `vercel.json` configuration automatically sets up the cron job.
 
-# Merge to main and deploy
-# Or deploy via Vercel dashboard
+## Quote Generation
+
+### Output Format
+
+The OpenRouter API generates quotes in the following JSON format:
+
+```json
+[
+  {
+    "quote": "学习之路没有尽头，只有新的起点",
+    "author": "林语堂",
+    "language": "zh",
+    "translation": null
+  },
+  {
+    "quote": "La vie est un mystère qu'il faut vivre, et non un problème à résoudre",
+    "author": "Gandhi",
+    "language": "fr",
+    "translation": "生活是一个需要体验的奥秘，而非一个需要解决的问题"
+  },
+  {
+    "quote": "Education is the most powerful weapon which you can use to change the world",
+    "author": "Nelson Mandela",
+    "language": "en",
+    "translation": null
+  }
+]
 ```
 
-### 6. Verify Cron Job
+### Language Distribution
 
-1. Go to Vercel Dashboard → Your Project → Cron Jobs
-2. You should see: `/api/cron/daily-quotes` scheduled for `0 0 * * *`
-3. Check the logs to verify execution
+The system generates a diverse mix of quotes:
+- ~60% English (en)
+- ~15% Chinese (zh)
+- ~15% French (fr)
+- ~10% Other languages (es, de, ja, etc.)
+
+### Translation Logic
+
+- English quotes: `translation` is `null`
+- Non-English quotes: `translation` may contain an English or Chinese translation
+- The frontend displays the translation when available
 
 ## Usage
 
@@ -170,7 +201,7 @@ git push origin feature/daily-quotes-cron
 The cron job runs automatically every day at **00:00 UTC (midnight)**.
 
 **What it does:**
-1. Generates 30 new quotes using OpenRouter AI
+1. Generates 30 new multilingual quotes using OpenRouter AI
 2. Deletes previous day's quotes from database
 3. Inserts new quotes with today's date
 4. Logs execution details
@@ -195,11 +226,11 @@ curl https://your-app.vercel.app/api/test/daily-quotes
   "todayQuotes": [
     {
       "id": "uuid",
-      "text": "Success is not final, failure is not fatal...",
-      "author": "Winston Churchill",
-      "created_date": "2025-12-24",
-      "order_index": 1,
-      "is_active": true
+      "quote": "学习之路没有尽头，只有新的起点",
+      "author": "林语堂",
+      "language": "zh",
+      "translation": null,
+      "day_id": "2025-12-24"
     }
     // ... more quotes
   ]
@@ -213,21 +244,35 @@ curl -X POST https://your-app.vercel.app/api/test/daily-quotes \
   -H "Authorization: Bearer YOUR_TEST_SECRET"
 ```
 
-**Response:**
-```json
+## Frontend Integration
+
+### Displaying Quotes
+
+The `DailyQuote` component automatically handles multilingual quotes:
+
+```javascript
+// Quote object structure
 {
-  "testRun": true,
-  "timestamp": "2025-12-24T14:50:00.000Z",
-  "cronResponse": {
-    "success": true,
-    "timestamp": "2025-12-24T14:50:00.000Z",
-    "duration": "2345ms",
-    "deleted": 30,
-    "inserted": 30,
-    "message": "Daily quotes successfully refreshed"
-  },
-  "status": 200
+  quote: "La vie est un mystère qu'il faut vivre",
+  author: "Gandhi",
+  language: "fr",
+  translation: "Life is a mystery to be lived, not a problem to be solved"
 }
+```
+
+**Display Features:**
+- Shows the quote in its original language
+- Displays the language code for non-English quotes
+- Shows translation below the quote when available
+- Responsive design with proper styling
+
+### Example Display
+
+```
+"La vie est un mystère qu'il faut vivre, et non un problème à résoudre"
+—— Gandhi
+Language: FR
+Translation: "Life is a mystery to be lived, not a problem to be solved"
 ```
 
 ## Security Features
@@ -241,76 +286,20 @@ curl -X POST https://your-app.vercel.app/api/test/daily-quotes \
 
 **Test Endpoint:**
 - POST requests require `Authorization: Bearer {TEST_SECRET}` header
-- GET requests can be configured to require authentication
 - Protects against unauthorized testing
 
 ### 2. Database Security
 
 - Uses Supabase Service Role Key for admin operations
 - Row Level Security (RLS) enabled on table
-- Public can only read active quotes
+- Public can only read quotes
 - Only service role can insert/update/delete
 
 ### 3. API Security
 
 - OpenRouter API key stored securely in environment variables
-- API requests include proper headers and referer information
+- API requests include proper headers
 - Rate limiting handled by OpenRouter
-
-## Error Handling
-
-### 1. API Errors
-
-```javascript
-// OpenRouter API failure
-{
-  "success": false,
-  "error": "OpenRouter API error: 429 - Rate limit exceeded",
-  "timestamp": "2025-12-24T14:50:00.000Z",
-  "duration": "1234ms"
-}
-```
-
-### 2. Database Errors
-
-```javascript
-// Supabase connection failure
-{
-  "success": false,
-  "error": "Error inserting new quotes: Connection timeout",
-  "timestamp": "2025-12-24T14:50:00.000Z",
-  "duration": "5678ms"
-}
-```
-
-### 3. Authorization Errors
-
-```javascript
-// Missing or invalid auth token
-{
-  "error": "Unauthorized"
-}
-```
-
-## Logging
-
-The cron job provides detailed console logging:
-
-```
-🚀 Starting daily quote generation cron job...
-📝 Generating 30 new quotes...
-✅ Generated 30 quotes
-🗑️  Deleting previous quotes...
-✅ Deleted 30 old quotes
-💾 Inserting new quotes...
-✅ Inserted 30 new quotes
-✨ Cron job completed successfully: { success: true, duration: '2345ms', ... }
-```
-
-**Error Logging:**
-```
-❌ Cron job failed: OpenRouter API error: 500
-```
 
 ## Monitoring
 
@@ -326,7 +315,7 @@ The cron job provides detailed console logging:
 1. Navigate to Table Editor
 2. Open `daily_quotes` table
 3. Verify quotes are being updated daily
-4. Check `created_date` column
+4. Check `day_id` column
 
 ### Manual Health Check
 
@@ -334,254 +323,105 @@ The cron job provides detailed console logging:
 # Check if today's quotes exist
 curl https://your-app.vercel.app/api/test/daily-quotes | jq '.todayQuotesCount'
 # Expected: 30
-```
 
-## Fetching Quotes in Your App
-
-### Client-Side Component
-
-```javascript
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-
-export default function DailyQuotesList() {
-  const [quotes, setQuotes] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchQuotes() {
-      const today = new Date().toISOString().split('T')[0];
-      
-      const { data, error } = await supabase
-        .from('daily_quotes')
-        .select('*')
-        .eq('created_date', today)
-        .eq('is_active', true)
-        .order('order_index', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching quotes:', error);
-      } else {
-        setQuotes(data);
-      }
-      
-      setLoading(false);
-    }
-
-    fetchQuotes();
-  }, []);
-
-  if (loading) return <div>Loading quotes...</div>;
-
-  return (
-    <div>
-      <h2>Today's Motivational Quotes</h2>
-      {quotes.map((quote) => (
-        <div key={quote.id} className="quote-card">
-          <p>"{quote.text}"</p>
-          <p>— {quote.author}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-```
-
-### Server-Side Fetching (Next.js App Router)
-
-```javascript
-import { createClient } from '@supabase/supabase-js';
-
-export default async function QuotesPage() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
-
-  const today = new Date().toISOString().split('T')[0];
-  
-  const { data: quotes } = await supabase
-    .from('daily_quotes')
-    .select('*')
-    .eq('created_date', today)
-    .eq('is_active', true)
-    .order('order_index', { ascending: true });
-
-  return (
-    <div>
-      <h1>Daily Quotes</h1>
-      {quotes?.map((quote) => (
-        <div key={quote.id}>
-          <blockquote>{quote.text}</blockquote>
-          <cite>— {quote.author}</cite>
-        </div>
-      ))}
-    </div>
-  );
-}
+# Check language distribution
+curl https://your-app.vercel.app/api/test/daily-quotes | jq '.todayQuotes | group_by(.language) | map({language: .[0].language, count: length})'
 ```
 
 ## Troubleshooting
 
-### Issue: Cron job not running
+### Issue: Quotes not generating with correct format
 
 **Check:**
-1. Verify `vercel.json` has correct cron configuration
-2. Check Vercel dashboard for cron job status
-3. Ensure deployment was successful
-4. Check Vercel logs for errors
+1. Verify OpenRouter API response includes all required fields
+2. Check the prompt in the cron job
+3. Review logs for JSON parsing errors
 
 **Solution:**
-```bash
-# Redeploy the application
-vercel --prod
-```
+The system validates that each quote has `quote`, `author`, and `language` fields. If validation fails, the entire batch is rejected.
 
-### Issue: Quotes not generating
+### Issue: Translations missing
+
+**Expected behavior:**
+- English quotes: `translation` should be `null`
+- Non-English quotes: `translation` may or may not be present
+- Frontend gracefully handles missing translations
+
+### Issue: Database schema mismatch
 
 **Check:**
-1. Verify `OPENROUTER_API_KEY` is set correctly
-2. Check OpenRouter dashboard for API usage/limits
-3. Review cron job logs for API errors
-
-**Solution:**
-```bash
-# Test OpenRouter API manually
-curl https://openrouter.ai/api/v1/chat/completions \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"model": "meta-llama/llama-3.1-8b-instruct:free", "messages": [{"role": "user", "content": "Test"}]}'
-```
-
-### Issue: Database errors
-
-**Check:**
-1. Verify `SUPABASE_SERVICE_ROLE_KEY` is correct
-2. Ensure `daily_quotes` table exists
-3. Check RLS policies are configured
-4. Verify Supabase project is active
-
-**Solution:**
 ```sql
--- Verify table exists
-SELECT * FROM daily_quotes LIMIT 1;
+-- Verify table structure
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'daily_quotes';
 
--- Check RLS is enabled
-SELECT tablename, rowsecurity FROM pg_tables WHERE tablename = 'daily_quotes';
+-- Should show: id, quote, author, language, translation, created_at, day_id
 ```
-
-### Issue: Unauthorized errors
-
-**Check:**
-1. Verify `CRON_SECRET` matches in Vercel environment variables
-2. Ensure authorization header is being sent correctly
-3. Check for typos in environment variable names
 
 **Solution:**
-```bash
-# Test with correct authorization
-curl https://your-app.vercel.app/api/cron/daily-quotes \
-  -H "Authorization: Bearer YOUR_CRON_SECRET"
+Drop and recreate the table, or alter it to match the new schema:
+
+```sql
+-- If migrating from old schema
+ALTER TABLE daily_quotes 
+  RENAME COLUMN text TO quote;
+
+ALTER TABLE daily_quotes
+  ADD COLUMN language TEXT NOT NULL DEFAULT 'en',
+  ADD COLUMN translation TEXT,
+  ADD COLUMN day_id TEXT;
+
+-- Update existing records
+UPDATE daily_quotes 
+SET day_id = TO_CHAR(created_at, 'YYYY-MM-DD')
+WHERE day_id IS NULL;
+
+-- Make day_id NOT NULL after backfilling
+ALTER TABLE daily_quotes ALTER COLUMN day_id SET NOT NULL;
 ```
 
-## Performance Optimization
+## Performance Considerations
 
-### 1. Database Indexes
+### Language Distribution Impact
 
-Indexes are created for:
-- `created_date` - Fast filtering by date
-- `is_active` - Quick active quote lookup
-- `order_index` - Efficient ordering
+With multiple languages:
+- Database size slightly larger due to Unicode characters
+- No performance impact on queries
+- Indexes work efficiently with all languages
 
-### 2. API Response Caching
+### Caching Strategy
 
-Cron endpoint responses are not cached:
-```javascript
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-```
+Frontend component caches quotes in `sessionStorage`:
+- Same quote displayed throughout a browser session
+- New quote on new session/tab
+- Reduces database queries
 
-### 3. Batch Operations
+## Cost Analysis
 
-Quotes are inserted in a single batch operation:
-```javascript
-const { data, error } = await supabaseAdmin
-  .from('daily_quotes')
-  .insert(quotesWithDate); // Batch insert
-```
+**Using 100% free tiers:**
 
-## Cost Considerations
-
-### OpenRouter API
-- **Model**: `meta-llama/llama-3.1-8b-instruct:free`
-- **Cost**: $0 (free tier)
-- **Daily Usage**: 1 request per day
-- **Monthly Cost**: $0
-
-### Vercel
-- **Cron Jobs**: Free on all plans
-- **API Routes**: Included in plan
-- **Bandwidth**: Minimal (small JSON responses)
-
-### Supabase
-- **Database**: Free tier includes 500 MB
-- **API Calls**: Unlimited on free tier
-- **Storage**: ~30 quotes/day = ~10KB/day = 3.6MB/year
-
-**Total Monthly Cost**: $0 (using free tiers)
+| Service | Tier | Cost |
+|---------|------|------|
+| OpenRouter API | Free (llama-3.1-8b) | $0/month |
+| Vercel Cron Jobs | Free on all plans | $0/month |
+| Supabase Database | Free tier (500 MB) | $0/month |
+| **Total** | | **$0/month** |
 
 ## Future Enhancements
 
-### Planned Features
-1. **Quote Categories**: Tag quotes by theme (success, learning, perseverance)
-2. **Multi-language Support**: Generate quotes in multiple languages
-3. **User Preferences**: Allow users to favorite/hide certain quotes
-4. **Analytics**: Track most viewed/shared quotes
-5. **Email Digest**: Send daily quotes via email
-6. **Quote Voting**: Let users vote on their favorite quotes
+1. **User Language Preferences**: Filter quotes by preferred language
+2. **Category Tags**: Tag quotes by theme (motivation, learning, wisdom)
+3. **Quote Ratings**: Let users rate quotes
+4. **Translation Improvements**: Add translations in multiple languages
+5. **Voice Playback**: Add audio reading of quotes
+6. **Social Sharing**: Share quotes with translations
 7. **Historical Archive**: Keep all quotes in archive table
-
-### Potential Improvements
-1. **Retry Logic**: Implement exponential backoff for API failures
-2. **Fallback Quotes**: Use static quotes if API fails
-3. **Rate Limiting**: Implement custom rate limiting
-4. **Monitoring**: Set up Sentry or similar for error tracking
-5. **Testing**: Add unit and integration tests
-
-## Support & Maintenance
-
-### Regular Maintenance Tasks
-
-1. **Weekly**: Review cron job logs for errors
-2. **Monthly**: Check OpenRouter API usage and limits
-3. **Quarterly**: Review and optimize database queries
-4. **Annually**: Update dependencies and API integrations
-
-### Updating the System
-
-```bash
-# Update dependencies
-npm update
-
-# Test locally
-npm run dev
-
-# Deploy updates
-git push origin main
-```
-
-## Contact & Support
-
-For issues, questions, or contributions:
-
-1. **GitHub Issues**: Open an issue in the repository
-2. **Documentation**: Check this file and API documentation
-3. **Vercel Support**: For platform-specific issues
-4. **Supabase Support**: For database-related issues
+8. **Analytics**: Track popular languages and quotes
 
 ---
 
-**Version**: 1.0.0  
+**Version**: 2.0.0 (Multilingual Update)  
 **Last Updated**: December 24, 2025  
 **Author**: Chris (RixGem)  
 **Status**: Production Ready ✅
