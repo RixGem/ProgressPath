@@ -1,85 +1,122 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
 
-// Fallback quotes in case API fails
+// Fallback quotes in case Supabase query fails
 const fallbackQuotes = [
   // Personal Growth (7 quotes)
   {
-    text: "The only way to do great work is to love what you do.",
-    author: "Steve Jobs"
+    quote: "The only way to do great work is to love what you do.",
+    author: "Steve Jobs",
+    language: "en",
+    translation: null
   },
   {
-    text: "Success is not final, failure is not fatal: it is the courage to continue that counts.",
-    author: "Winston Churchill"
+    quote: "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+    author: "Winston Churchill",
+    language: "en",
+    translation: null
   },
   {
-    text: "Believe you can and you're halfway there.",
-    author: "Theodore Roosevelt"
+    quote: "Believe you can and you're halfway there.",
+    author: "Theodore Roosevelt",
+    language: "en",
+    translation: null
   },
   {
-    text: "The future belongs to those who believe in the beauty of their dreams.",
-    author: "Eleanor Roosevelt"
+    quote: "The future belongs to those who believe in the beauty of their dreams.",
+    author: "Eleanor Roosevelt",
+    language: "en",
+    translation: null
   },
   {
-    text: "It does not matter how slowly you go as long as you do not stop.",
-    author: "Confucius"
+    quote: "It does not matter how slowly you go as long as you do not stop.",
+    author: "Confucius",
+    language: "en",
+    translation: null
   },
   {
-    text: "Everything you've ever wanted is on the other side of fear.",
-    author: "George Addair"
+    quote: "Everything you've ever wanted is on the other side of fear.",
+    author: "George Addair",
+    language: "en",
+    translation: null
   },
   {
-    text: "The only impossible journey is the one you never begin.",
-    author: "Tony Robbins"
+    quote: "The only impossible journey is the one you never begin.",
+    author: "Tony Robbins",
+    language: "en",
+    translation: null
   },
   
   // Learning (7 quotes)
   {
-    text: "Education is the most powerful weapon which you can use to change the world.",
-    author: "Nelson Mandela"
+    quote: "Education is the most powerful weapon which you can use to change the world.",
+    author: "Nelson Mandela",
+    language: "en",
+    translation: null
   },
   {
-    text: "The beautiful thing about learning is that no one can take it away from you.",
-    author: "B.B. King"
+    quote: "The beautiful thing about learning is that no one can take it away from you.",
+    author: "B.B. King",
+    language: "en",
+    translation: null
   },
   {
-    text: "Live as if you were to die tomorrow. Learn as if you were to live forever.",
-    author: "Mahatma Gandhi"
+    quote: "Live as if you were to die tomorrow. Learn as if you were to live forever.",
+    author: "Mahatma Gandhi",
+    language: "en",
+    translation: null
   },
   {
-    text: "The capacity to learn is a gift; the ability to learn is a skill; the willingness to learn is a choice.",
-    author: "Brian Herbert"
+    quote: "The capacity to learn is a gift; the ability to learn is a skill; the willingness to learn is a choice.",
+    author: "Brian Herbert",
+    language: "en",
+    translation: null
   },
   {
-    text: "Learning never exhausts the mind.",
-    author: "Leonardo da Vinci"
+    quote: "Learning never exhausts the mind.",
+    author: "Leonardo da Vinci",
+    language: "en",
+    translation: null
   },
   {
-    text: "An investment in knowledge pays the best interest.",
-    author: "Benjamin Franklin"
+    quote: "An investment in knowledge pays the best interest.",
+    author: "Benjamin Franklin",
+    language: "en",
+    translation: null
   },
   {
-    text: "The expert in anything was once a beginner.",
-    author: "Helen Hayes"
+    quote: "The expert in anything was once a beginner.",
+    author: "Helen Hayes",
+    language: "en",
+    translation: null
   },
   
   // Philosophy (4 quotes)
   {
-    text: "The unexamined life is not worth living.",
-    author: "Socrates"
+    quote: "The unexamined life is not worth living.",
+    author: "Socrates",
+    language: "en",
+    translation: null
   },
   {
-    text: "I think, therefore I am.",
-    author: "René Descartes"
+    quote: "I think, therefore I am.",
+    author: "René Descartes",
+    language: "en",
+    translation: null
   },
   {
-    text: "He who has a why to live can bear almost any how.",
-    author: "Friedrich Nietzsche"
+    quote: "He who has a why to live can bear almost any how.",
+    author: "Friedrich Nietzsche",
+    language: "en",
+    translation: null
   },
   {
-    text: "The only true wisdom is in knowing you know nothing.",
-    author: "Socrates"
+    quote: "The only true wisdom is in knowing you know nothing.",
+    author: "Socrates",
+    language: "en",
+    translation: null
   }
 ]
 
@@ -106,43 +143,56 @@ export default function DailyQuote() {
           return
         }
 
-        // Fetch from Zen Quotes API
+        // Fetch random quote from Supabase daily_quotes table
         setIsLoading(true)
         setError(null)
         
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+        // Get total count of quotes
+        const { count, error: countError } = await supabase
+          .from('daily_quotes')
+          .select('*', { count: 'exact', head: true })
         
-        const response = await fetch('https://zenquotes.io/api/random', {
-          signal: controller.signal,
-          cache: 'no-store'
-        })
-        
-        clearTimeout(timeoutId)
-        
-        if (!response.ok) {
-          throw new Error('API request failed')
+        if (countError) {
+          throw new Error(`Failed to get quote count: ${countError.message}`)
         }
         
-        const data = await response.json()
+        if (!count || count === 0) {
+          throw new Error('No quotes available in database')
+        }
         
-        if (data && data[0]) {
-          const apiQuote = {
-            text: data[0].q,
-            author: data[0].a
+        // Generate random offset
+        const randomOffset = Math.floor(Math.random() * count)
+        
+        // Fetch a random quote using offset with all fields
+        const { data, error: fetchError } = await supabase
+          .from('daily_quotes')
+          .select('quote, author, language, translation')
+          .range(randomOffset, randomOffset)
+          .single()
+        
+        if (fetchError) {
+          throw new Error(`Failed to fetch quote: ${fetchError.message}`)
+        }
+        
+        if (data) {
+          const supabaseQuote = {
+            quote: data.quote,
+            author: data.author,
+            language: data.language || 'en',
+            translation: data.translation || null
           }
           
           // Cache the quote for this session
-          sessionStorage.setItem(CACHE_KEY, JSON.stringify(apiQuote))
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify(supabaseQuote))
           sessionStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString())
           
-          setQuote(apiQuote)
+          setQuote(supabaseQuote)
           setIsLoading(false)
         } else {
-          throw new Error('Invalid API response')
+          throw new Error('Invalid database response')
         }
       } catch (err) {
-        console.error('Error fetching quote from API:', err)
+        console.error('Error fetching quote from Supabase:', err)
         setError(err.message)
         
         // Fall back to local quotes
@@ -198,12 +248,24 @@ export default function DailyQuote() {
 
   return (
     <div className="text-center">
-      <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto italic">
-        &ldquo;{quote.text}&rdquo;
-      </p>
-      <p className="text-lg text-gray-500 dark:text-gray-400 mt-2">
-        —— {quote.author}
-      </p>
+      <div className="max-w-2xl mx-auto">
+        <p className="text-xl text-gray-600 dark:text-gray-300 italic">
+          &ldquo;{quote.quote}&rdquo;
+        </p>
+        <p className="text-lg text-gray-500 dark:text-gray-400 mt-2">
+          —— {quote.author}
+        </p>
+        {quote.language !== 'en' && (
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+            Language: {quote.language.toUpperCase()}
+          </p>
+        )}
+        {quote.translation && (
+          <p className="text-md text-gray-500 dark:text-gray-400 mt-3 italic">
+            Translation: &ldquo;{quote.translation}&rdquo;
+          </p>
+        )}
+      </div>
     </div>
   )
 }
