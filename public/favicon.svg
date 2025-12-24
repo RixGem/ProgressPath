@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Background -->
+  <rect width="64" height="64" rx="12" fill="#6366f1"/>
+  
+  <!-- Progress path graphic - stylized upward path -->
+  <g fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Path line going upward -->
+    <path d="M 16 48 L 24 38 L 32 42 L 40 28 L 48 16" stroke-opacity="0.3" stroke-width="2"/>
+    <path d="M 16 48 L 24 38 L 32 42 L 40 28 L 48 16" stroke-dasharray="2,2" stroke-opacity="0.5"/>
+  </g>
+  
+  <!-- Milestone markers -->
+  <circle cx="16" cy="48" r="3" fill="#fbbf24" stroke="#ffffff" stroke-width="1.5"/>
+  <circle cx="24" cy="38" r="3" fill="#fbbf24" stroke="#ffffff" stroke-width="1.5"/>
+  <circle cx="32" cy="42" r="3" fill="#fbbf24" stroke="#ffffff" stroke-width="1.5"/>
+  <circle cx="40" cy="28" r="3" fill="#10b981" stroke="#ffffff" stroke-width="1.5"/>
+  <circle cx="48" cy="16" r="4" fill="#10b981" stroke="#ffffff" stroke-width="2"/>
+  
+  <!-- Star at the top to represent achievement -->
+  <path d="M 48 12 L 49.5 15 L 53 15.5 L 50.5 18 L 51 21.5 L 48 19.5 L 45 21.5 L 45.5 18 L 43 15.5 L 46.5 15 Z" fill="#fbbf24" stroke="#ffffff" stroke-width="0.5"/>
+</svg>
