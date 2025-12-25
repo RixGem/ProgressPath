@@ -284,6 +284,8 @@ Chris - [RixGem](https://github.com/RixGem)
 
 Built with ❤️ using Next.js and Supabase
 
+**All powered by Poke ~** ✨
+
 *Happy Learning! Keep that streak going! 🔥*
 
 **Pro tip**: Try dark mode for your late-night study sessions! 🌙
