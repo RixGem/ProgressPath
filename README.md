@@ -62,6 +62,7 @@ A modern Next.js application to track your learning progress across books and la
 - **Deployment**: Vercel
 - **State Management**: React Hooks
 - **Storage**: localStorage for theme preference
+- **AI Integration**: OpenRouter API for daily quote generation
 
 ## Getting Started
 
@@ -84,10 +85,30 @@ npm install
 
 3. Set up environment variables:
 
-Create a `.env.local` file in the root directory with your Supabase credentials:
+Create a `.env.local` file in the root directory based on `.env.example`:
+```bash
+cp .env.example .env.local
 ```
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+Fill in your credentials:
+```env
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
+
+# OpenRouter API Configuration
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_MODEL_ID=meta-llama/llama-3.1-8b-instruct:free
+
+# Application URL
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Cron Job Security
+CRON_SECRET=your_secure_cron_secret_here
+
+# Test Endpoint Security (optional)
+TEST_SECRET=your_secure_test_secret_here
 ```
 
 4. Set up Supabase tables:
@@ -145,6 +166,147 @@ npm run dev
 
 6. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+## Deployment to Vercel
+
+This project is optimized for deployment on Vercel with automated daily quote generation via cron jobs.
+
+### 🚀 Step-by-Step Deployment Guide
+
+#### 1. Prepare Your Repository
+
+Ensure your code is pushed to GitHub:
+```bash
+git add .
+git commit -m "Ready for deployment"
+git push origin main
+```
+
+#### 2. Import Project to Vercel
+
+1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
+2. Click **"Add New..."** → **"Project"**
+3. Import your GitHub repository: `RixGem/ProgressPath`
+4. Vercel will auto-detect Next.js configuration
+
+#### 3. Configure Environment Variables
+
+⚠️ **IMPORTANT**: Never commit sensitive credentials to your repository. Always use Vercel's Environment Variables feature.
+
+In your Vercel project settings:
+
+1. Navigate to **Settings** → **Environment Variables**
+2. Add the following variables for **Production**, **Preview**, and **Development** environments:
+
+##### Required Variables
+
+| Variable Name | Description | Where to Get It |
+|--------------|-------------|----------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | Supabase Dashboard → Project Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | Supabase Dashboard → Project Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (sensitive) | Supabase Dashboard → Project Settings → API |
+| `OPENROUTER_API_KEY` | OpenRouter API key for AI quotes | [OpenRouter Keys](https://openrouter.ai/keys) |
+| `OPENROUTER_MODEL_ID` | AI model to use | Default: `meta-llama/llama-3.1-8b-instruct:free` |
+| `NEXT_PUBLIC_APP_URL` | Your deployed app URL | `https://your-app.vercel.app` |
+| `CRON_SECRET` | Secure secret for cron authentication | Generate with: `openssl rand -base64 32` |
+| `TEST_SECRET` | (Optional) Secret for test endpoints | Generate with: `openssl rand -base64 32` |
+
+##### Generate Secure Secrets
+
+```bash
+# Generate CRON_SECRET
+openssl rand -base64 32
+
+# Generate TEST_SECRET
+openssl rand -base64 32
+```
+
+#### 4. Deploy
+
+1. Click **"Deploy"** in Vercel
+2. Vercel will:
+   - Install dependencies (`npm install`)
+   - Build your Next.js application (`next build`)
+   - Deploy to production
+3. Your app will be live at `https://your-app.vercel.app`
+
+#### 5. Configure Cron Job (Automatic)
+
+The `vercel.json` configuration automatically sets up a daily cron job:
+- **Endpoint**: `/api/cron/daily-quotes`
+- **Schedule**: `0 0 * * *` (runs at midnight UTC daily)
+- **Purpose**: Generates a new inspirational quote each day
+
+**Security**: The cron endpoint is protected by `CRON_SECRET`. Vercel automatically includes the `Authorization` header when triggering scheduled functions.
+
+#### 6. Verify Deployment
+
+✅ **Post-Deployment Checklist**:
+
+- [ ] Application loads successfully
+- [ ] Database connection works (Books and French Learning pages load)
+- [ ] Dark mode toggle functions
+- [ ] Daily quote displays on homepage
+- [ ] All environment variables are set correctly
+- [ ] No sensitive data exposed in source code or logs
+- [ ] Cron job scheduled (check Vercel Dashboard → Cron)
+
+#### 7. Monitor and Maintain
+
+- **View Logs**: Vercel Dashboard → Your Project → Deployments → View Function Logs
+- **Cron Logs**: Check execution logs to ensure daily quotes are generating
+- **Update Environment Variables**: Settings → Environment Variables (changes require redeployment)
+
+### 🔒 Security Best Practices
+
+1. **Never hardcode credentials** in `vercel.json` or any committed files
+2. **Use Vercel Environment Variables** for all sensitive data
+3. **Rotate secrets regularly**, especially if exposed
+4. **Enable Vercel Authentication** for preview deployments if needed
+5. **Review `.gitignore`** to ensure `.env.local` and `.env.*.local` are excluded
+6. **Use different credentials** for development, preview, and production environments
+
+### 🔄 Continuous Deployment
+
+Vercel automatically deploys:
+- **Production**: When you push to `main` branch
+- **Preview**: For every pull request and branch push
+
+To trigger a redeployment:
+```bash
+git commit --allow-empty -m "chore: trigger redeployment"
+git push
+```
+
+### 🐛 Troubleshooting Deployment Issues
+
+#### Build Fails
+- Check build logs in Vercel Dashboard
+- Verify all dependencies in `package.json`
+- Ensure Node.js version compatibility (18+)
+
+#### Environment Variables Not Working
+- Confirm variables are set for the correct environment (Production/Preview/Development)
+- Redeploy after adding/updating environment variables
+- Check for typos in variable names
+
+#### Database Connection Errors
+- Verify Supabase credentials are correct
+- Check Supabase project is active
+- Ensure RLS policies allow operations
+
+#### Cron Job Not Running
+- Verify `CRON_SECRET` is set in environment variables
+- Check cron logs in Vercel Dashboard
+- Ensure cron path matches your API route: `/api/cron/daily-quotes`
+
+### 📚 Additional Resources
+
+- [Vercel Environment Variables Documentation](https://vercel.com/docs/concepts/projects/environment-variables)
+- [Vercel Cron Jobs Documentation](https://vercel.com/docs/cron-jobs)
+- [Next.js Deployment Documentation](https://nextjs.org/docs/deployment)
+- [Supabase Documentation](https://supabase.com/docs)
+- [OpenRouter API Documentation](https://openrouter.ai/docs)
+
 ## Usage Guide
 
 ### Using Dark Mode
@@ -157,10 +319,10 @@ npm run dev
 - A new inspirational quote appears on the homepage each day
 - Quotes cover personal growth, learning, and philosophical wisdom
 - The same quote displays throughout the day for consistency
-- Quotes automatically rotate at midnight
+- Quotes automatically rotate at midnight (via Vercel Cron)
 
 ### Books Dashboard
-1. Click \"Add Book\" to add a new book to your collection
+1. Click "Add Book" to add a new book to your collection
 2. Fill in the book details (title, author, progress percentage)
 3. Add optional information:
    - Genre/Category
@@ -175,7 +337,7 @@ npm run dev
 ### French Learning Dashboard
 
 #### Logging an Activity
-1. Click \"Log Activity\" to open the form
+1. Click "Log Activity" to open the form
 2. Select your activity type (vocabulary, grammar, etc.)
 3. Enter duration in minutes
 4. Choose the date (defaults to today)
@@ -188,7 +350,7 @@ npm run dev
 7. **Optional**: Add practice sentences (comma-separated)
    - Example: `Comment allez-vous?, Je vais bien`
 8. **Optional**: Add notes about what you learned
-9. Click \"Log Activity\" to save
+9. Click "Log Activity" to save
 
 #### Viewing Your Progress
 - **Total Hours**: See your cumulative learning time (properly converted from minutes)
@@ -208,17 +370,6 @@ npm run dev
 If you have an existing database, see these migration guides:
 - `DATABASE_MIGRATION.md` - For total_time field
 - `DATABASE_MIGRATION_NEW_FIELDS.md` - For vocabulary, sentences, and mood fields
-
-## Deployment
-
-This project is configured for deployment on Vercel:
-
-1. Push your code to GitHub
-2. Import the project in Vercel
-3. Add your environment variables in Vercel project settings
-4. Deploy!
-
-Vercel will automatically deploy updates when you push to the main branch.
 
 ## Theme Customization
 
@@ -254,9 +405,10 @@ The daily quotes feature includes 18 inspirational quotes:
 - Check browser console for errors
 - Verify component is imported correctly
 - Ensure the DailyQuote component is rendering
+- Check Vercel cron logs for quote generation issues
 
 ### Database Issues
-- Verify Supabase connection in `.env.local`
+- Verify Supabase connection in `.env.local` or Vercel Environment Variables
 - Check table schemas match the SQL commands above
 - Review Supabase logs for errors
 
@@ -266,6 +418,10 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Changelog
 
+- **v2.1.0**: Security and deployment improvements
+  - Removed hardcoded credentials from vercel.json
+  - Added comprehensive Vercel deployment documentation
+  - Enhanced security best practices
 - **v2.0.0**: Added Dark Mode and Daily Inspirational Quotes
   - See `CHANGELOG_DARK_MODE_AND_QUOTES.md` for details
 - **v1.5.0**: Enhanced French Learning features
