@@ -123,40 +123,50 @@ ProgressPath now supports **multiple naming conventions** for environment variab
 The application supports both **standard** (Next.js convention) and **legacy** (deployment platform) variable names:
 
 | Standard Variable Name | Legacy/Alternative Names | Purpose |
-|----------------------|--------------------------|---------|
-| `NEXT_PUBLIC_SUPABASE_URL` | `NEXTPUBLICSUPABASE_URL`, `SUPABASE_URL` | Supabase project URL |
+|----------------------|--------------------------|----|
+| `NEXT_PUBLIC_SUPABASE_URL` | `NEXTPUBLICSUPABASE_URL`, `SUPABASE_URL` | Supabase项目URL，用于API连接 (Supabase project URL for API connection) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `SUPABASE_ANON_KEY` | Supabase anonymous key |
 | `SUPABASE_SERVICE_ROLE_KEY` | `SUPABASE_SERVICE_KEY` | Supabase service role key |
 | `OPENROUTER_API_KEY` | `OPEN_ROUTER_API_KEY` | OpenRouter API key |
 | `OPENROUTER_MODEL_ID` | `OPEN_ROUTER_MODEL_ID` | OpenRouter model identifier |
-| `NEXT_PUBLIC_APP_URL` | `APP_URL`, `VERCEL_URL` | Application URL |
-| `JWT_SECRET` | `JWT_EMBED_SECRET`, `JWTEMBEDSECRET` | JWT secret for embed tokens |
+| `NEXT_PUBLIC_APP_URL` | `APP_URL`, `VERCEL_URL` | 应用部署URL，用于生成嵌入链接 (Application deployment URL for generating embed links) |
+| `JWT_EMBED_SECRET` | `JWT_SECRET`, `JWTEMBEDSECRET` | 用于签名嵌入令牌 (For signing embed tokens) |
 
 #### Understanding Variable Purposes (避免混淆)
 
 为了避免配置错误，请了解不同环境变量的具体用途：
 
-##### 🔐 JWT 令牌签名密钥
-- **变量名**: `JWT_SECRET` / `JWT_EMBED_SECRET` / `JWTEMBEDSECRET`
-- **用途**: 用于签名和验证嵌入式令牌（embed tokens）
-- **示例值**: `your_secure_jwt_secret_here`
-- **重要性**: 此密钥用于加密令牌，确保嵌入链接的安全性
+To avoid configuration errors, please understand the specific purposes of different environment variables:
 
-##### 🌐 应用部署 URL
-- **变量名**: `NEXT_PUBLIC_APP_URL` / `APP_URL` / `VERCEL_URL`
-- **用途**: 应用的部署地址，用于生成嵌入链接和回调 URL
-- **示例值**: `https://your-app.vercel.app` 或 `http://localhost:3000`
-- **重要性**: 确保嵌入功能能正确生成访问链接
+##### 🔐 JWT 令牌签名密钥 (JWT Token Signing Key)
+- **变量名 (Variable Names)**: `JWT_EMBED_SECRET` / `JWT_SECRET` / `JWTEMBEDSECRET`
+- **用途 (Purpose)**: 用于签名和验证嵌入式令牌（embed tokens）  
+  **For signing and verifying embed tokens**
+- **示例值 (Example Value)**: `your_secure_jwt_secret_here`
+- **重要性 (Importance)**: 此密钥用于加密令牌，确保嵌入链接的安全性  
+  **This key is used to encrypt tokens and ensure the security of embed links**
 
-##### 🗄️ Supabase 项目 URL
-- **变量名**: `NEXT_PUBLIC_SUPABASE_URL` / `NEXTPUBLICSUPABASE_URL` / `SUPABASE_URL`
-- **用途**: Supabase 数据库项目的 API 端点
-- **示例值**: `https://xxxxx.supabase.co`
-- **重要性**: 用于连接数据库，与应用 URL 完全不同
+##### 🌐 应用部署 URL (Application Deployment URL)
+- **变量名 (Variable Names)**: `NEXT_PUBLIC_APP_URL` / `APP_URL` / `VERCEL_URL`
+- **用途 (Purpose)**: 应用的部署地址，用于生成嵌入链接和回调 URL  
+  **Application deployment URL for generating embed links and callback URLs**
+- **示例值 (Example Value)**: `https://your-app.vercel.app` 或 `http://localhost:3000`
+- **重要性 (Importance)**: 确保嵌入功能能正确生成访问链接  
+  **Ensures embed functionality can correctly generate access links**
 
-**⚠️ 常见错误**: 不要将 Supabase URL 和 App URL 混淆！
-- ❌ 错误: 将 `NEXT_PUBLIC_APP_URL` 设置为 Supabase URL
-- ✅ 正确: `NEXT_PUBLIC_SUPABASE_URL` = Supabase 项目地址, `NEXT_PUBLIC_APP_URL` = 应用部署地址
+##### 🗄️ Supabase 项目 URL (Supabase Project URL)
+- **变量名 (Variable Names)**: `NEXT_PUBLIC_SUPABASE_URL` / `NEXTPUBLICSUPABASE_URL` / `SUPABASE_URL`
+- **用途 (Purpose)**: Supabase 数据库项目的 API 端点  
+  **Supabase database project API endpoint**
+- **示例值 (Example Value)**: `https://xxxxx.supabase.co`
+- **重要性 (Importance)**: 用于连接数据库，与应用 URL 完全不同  
+  **Used for connecting to the database, completely different from the app URL**
+
+**⚠️ 常见错误 (Common Mistakes)**: 不要将 Supabase URL 和 App URL 混淆！  
+**Do not confuse Supabase URL with App URL!**
+- ❌ 错误 (Wrong): 将 `NEXT_PUBLIC_APP_URL` 设置为 Supabase URL  
+  Setting `NEXT_PUBLIC_APP_URL` to Supabase URL
+- ✅ 正确 (Correct): `NEXT_PUBLIC_SUPABASE_URL` = Supabase 项目地址 (Supabase project URL), `NEXT_PUBLIC_APP_URL` = 应用部署地址 (Application deployment URL)
 
 #### Fallback Behavior
 
@@ -178,7 +188,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 OPENROUTER_API_KEY=sk-or-v1-xxxxx
 OPENROUTER_MODEL_ID=meta-llama/llama-3.1-8b-instruct:free
 NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
-JWT_SECRET=your_secure_jwt_secret_here
+JWT_EMBED_SECRET=your_secure_jwt_secret_here
 CRON_SECRET=your_secure_cron_secret_here
 ```
 
@@ -190,7 +200,7 @@ SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 OPEN_ROUTER_API_KEY=sk-or-v1-xxxxx
 OPEN_ROUTER_MODEL_ID=meta-llama/llama-3.1-8b-instruct:free
 APP_URL=https://your-app.vercel.app
-JWT_EMBED_SECRET=your_secure_jwt_secret_here
+JWT_SECRET=your_secure_jwt_secret_here
 CRON_SECRET=your_secure_cron_secret_here
 ```
 
@@ -322,16 +332,16 @@ In your Vercel project settings:
 | `OPENROUTER_API_KEY` | OpenRouter API key for AI quotes | [OpenRouter Keys](https://openrouter.ai/keys) |
 | `OPENROUTER_MODEL_ID` | AI model to use | Default: `meta-llama/llama-3.1-8b-instruct:free` |
 | `NEXT_PUBLIC_APP_URL` | Your deployed app URL | `https://your-app.vercel.app` |
-| `JWT_SECRET` | JWT secret for embed token signing | Generate with: `openssl rand -base64 32` |
+| `JWT_EMBED_SECRET` | JWT secret for embed token signing | Generate with: `openssl rand -base64 32` |
 | `CRON_SECRET` | Secure secret for cron authentication | Generate with: `openssl rand -base64 32` |
 | `TEST_SECRET` | (Optional) Secret for test endpoints | Generate with: `openssl rand -base64 32` |
 
-**💡 Compatibility Note**: You can also use legacy variable names (e.g., `SUPABASE_URL` instead of `NEXT_PUBLIC_SUPABASE_URL`). See the [Environment Variable Naming Compatibility](#-environment-variable-naming-compatibility) section for details.
+**💡 Compatibility Note**: You can also use legacy variable names (e.g., `SUPABASE_URL` instead of `NEXT_PUBLIC_SUPABASE_URL`, or `JWT_SECRET` instead of `JWT_EMBED_SECRET`). See the [Environment Variable Naming Compatibility](#-environment-variable-naming-compatibility) section for details.
 
 ##### Generate Secure Secrets
 
 ```bash
-# Generate JWT_SECRET
+# Generate JWT_EMBED_SECRET (or JWT_SECRET)
 openssl rand -base64 32
 
 # Generate CRON_SECRET
