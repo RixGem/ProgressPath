@@ -17,9 +17,14 @@ const FETCH_TIMEOUT_MS = 30000; // 30 second timeout for internal API calls
  * @returns {Object} Validation result with missing variables if any
  */
 function validateEnvironment() {
+  // Environment variable compatibility layer
+  // Support both SUPABASE_SERVICE_ROLE_KEY (standard) and SUPABASE_SERVICE_KEY (legacy)
+  // This ensures the app works regardless of which naming convention is used in deployment
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+
   const required = {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_SERVICE_KEY: supabaseServiceKey, // Using unified variable name
     CRON_SECRET: process.env.CRON_SECRET,
   };
 
@@ -30,11 +35,21 @@ function validateEnvironment() {
     }
   }
 
+  if (missing.length > 0) {
+    // Enhanced error logging for debugging
+    console.error('❌ Missing environment variables:', missing.join(', '));
+    console.error('Available Supabase keys:', {
+      hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_KEY
+    });
+  }
+
   return {
     valid: missing.length === 0,
     missing,
     message: missing.length > 0 
-      ? `Missing environment variables: ${missing.join(', ')}`
+      ? `Missing environment variables: ${missing.join(', ')}. ` +
+        `For Supabase service key, use either SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY.`
       : 'All required environment variables are present'
   };
 }
@@ -56,9 +71,17 @@ function initializeSupabase() {
 
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    // Environment variable compatibility layer
+    // Try SUPABASE_SERVICE_ROLE_KEY first (standard), fallback to SUPABASE_SERVICE_KEY (legacy)
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('❌ Supabase credentials missing:', {
+        hasUrl: !!supabaseUrl,
+        hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        hasServiceKey: !!process.env.SUPABASE_SERVICE_KEY
+      });
       throw new Error('Supabase credentials not configured');
     }
 
@@ -72,9 +95,11 @@ function initializeSupabase() {
       }
     });
 
+    console.log('✅ Supabase client initialized successfully');
     return supabaseAdmin;
   } catch (error) {
     initializationError = error;
+    console.error('❌ Failed to initialize Supabase client:', error.message);
     throw error;
   }
 }
