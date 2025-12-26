@@ -4,14 +4,26 @@ import { NextResponse } from 'next/server';
 
 // Initialize Supabase client with service role for server-side operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// JWT secret for signing embed tokens
-const JWT_SECRET = process.env.JWT_EMBED_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Environment Variable Compatibility Layer
+// Supports multiple naming conventions to work across different deployment environments
+// Priority order: primary convention -> alternative convention -> fallback
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+const jwtSecret = process.env.JWT_EMBED_SECRET || process.env.JWTEMBEDSECRET || supabaseServiceKey;
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'https://progress-path-one.vercel.app';
+
+// JWT token configuration
 const JWT_EXPIRATION = '7d'; // Token valid for 7 days
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('Missing required Supabase environment variables');
+// Environment validation with detailed error logging for debugging
+if (!supabaseServiceKey) {
+  console.error('Missing Supabase service key: SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY must be set');
+}
+if (!jwtSecret) {
+  console.error('Missing JWT secret: JWT_EMBED_SECRET, JWTEMBEDSECRET or Supabase service key must be set');
+}
+if (!supabaseUrl) {
+  console.error('Missing Supabase URL: NEXT_PUBLIC_SUPABASE_URL must be set');
 }
 
 /**
@@ -90,7 +102,8 @@ export async function POST(request) {
     };
 
     // Sign JWT token using jose library
-    const secret = new TextEncoder().encode(JWT_SECRET);
+    // Uses compatible JWT secret from environment variables
+    const secret = new TextEncoder().encode(jwtSecret);
     const embedToken = await new SignJWT(payload)
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
@@ -98,8 +111,7 @@ export async function POST(request) {
       .setSubject(userData.id)
       .sign(secret);
 
-    // Generate embed URL
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    // Generate embed URL with compatibility for different hosting environments
     const embedUrl = `${appUrl}/embed?token=${embedToken}`;
 
     // Return response with token and embed URL
@@ -193,8 +205,8 @@ export async function GET(request) {
       createdAt: new Date().toISOString(),
     };
 
-    // Sign JWT token
-    const secret = new TextEncoder().encode(JWT_SECRET);
+    // Sign JWT token using compatible JWT secret
+    const secret = new TextEncoder().encode(jwtSecret);
     const embedToken = await new SignJWT(payload)
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
@@ -202,8 +214,7 @@ export async function GET(request) {
       .setSubject(userData.id)
       .sign(secret);
 
-    // Generate embed URL
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    // Generate embed URL with compatibility for different hosting environments
     const embedUrl = `${appUrl}/embed?token=${embedToken}`;
 
     // Return response
@@ -233,6 +244,9 @@ export async function GET(request) {
 /**
  * Parse duration string to milliseconds
  * Supports formats like: '7d', '30d', '12h', '60m'
+ * 
+ * @param {string} duration - Duration string to parse
+ * @returns {number} Duration in milliseconds
  */
 function parseDuration(duration) {
   const units = {
