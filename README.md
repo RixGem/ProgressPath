@@ -111,6 +111,87 @@ CRON_SECRET=your_secure_cron_secret_here
 TEST_SECRET=your_secure_test_secret_here
 ```
 
+### 🔄 Environment Variable Naming Compatibility
+
+ProgressPath now supports **multiple naming conventions** for environment variables, making it easier to deploy across different platforms and integrate with existing configurations. The application automatically detects and uses the correct variable names based on what's available in your environment.
+
+#### Supported Naming Conventions
+
+The application supports both **standard** (Next.js convention) and **legacy** (deployment platform) variable names:
+
+| Standard Variable Name | Legacy/Alternative Names | Purpose |
+|----------------------|--------------------------|---------|
+| `NEXT_PUBLIC_SUPABASE_URL` | `SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `SUPABASE_ANON_KEY` | Supabase anonymous key |
+| `SUPABASE_SERVICE_ROLE_KEY` | `SUPABASE_SERVICE_KEY` | Supabase service role key |
+| `OPENROUTER_API_KEY` | `OPEN_ROUTER_API_KEY` | OpenRouter API key |
+| `OPENROUTER_MODEL_ID` | `OPEN_ROUTER_MODEL_ID` | OpenRouter model identifier |
+| `NEXT_PUBLIC_APP_URL` | `APP_URL`, `VERCEL_URL` | Application URL |
+
+#### Fallback Behavior
+
+The application uses an **intelligent fallback system** that checks for variables in order of preference:
+
+1. **First**: Standard Next.js naming convention (e.g., `NEXT_PUBLIC_SUPABASE_URL`)
+2. **Second**: Legacy/alternative naming convention (e.g., `SUPABASE_URL`)
+3. **Third**: Platform-specific defaults (e.g., `VERCEL_URL` for deployment URL)
+
+This means you can use **either** naming convention, and the application will automatically find and use the correct value.
+
+#### Examples
+
+##### Example 1: Standard Naming (Recommended)
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+OPENROUTER_API_KEY=sk-or-v1-xxxxx
+OPENROUTER_MODEL_ID=meta-llama/llama-3.1-8b-instruct:free
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+CRON_SECRET=your_secure_cron_secret_here
+```
+
+##### Example 2: Legacy Naming (Still Supported)
+```env
+SUPABASE_URL=https://xxxxx.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+OPEN_ROUTER_API_KEY=sk-or-v1-xxxxx
+OPEN_ROUTER_MODEL_ID=meta-llama/llama-3.1-8b-instruct:free
+APP_URL=http://localhost:3000
+CRON_SECRET=your_secure_cron_secret_here
+```
+
+##### Example 3: Mixed Naming (Works Too!)
+```env
+# Mix and match - the app will find the right values
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+OPEN_ROUTER_API_KEY=sk-or-v1-xxxxx
+OPENROUTER_MODEL_ID=meta-llama/llama-3.1-8b-instruct:free
+VERCEL_URL=your-app.vercel.app  # Automatically used if APP_URL not set
+```
+
+#### Migration Notes
+
+- **✅ No Breaking Changes**: Existing configurations continue to work without modification
+- **✅ Flexible**: Choose the naming convention that works best for your deployment platform
+- **✅ Future-Proof**: Standard Next.js naming is recommended for new projects
+- **⚠️ Priority**: If both standard and legacy variables are set, the standard name takes precedence
+
+#### Troubleshooting Variable Issues
+
+If environment variables aren't being detected:
+
+1. **Check variable names**: Ensure they match one of the supported conventions above
+2. **Restart development server**: Changes to `.env.local` require a restart (`npm run dev`)
+3. **Verify file location**: `.env.local` should be in the project root directory
+4. **Check for typos**: Variable names are case-sensitive
+5. **Redeploy on Vercel**: After updating environment variables in Vercel dashboard, trigger a new deployment
+
+**Developer Tip**: You can check which variables are being used by reviewing the console logs during application startup (in development mode).
+
 4. Set up Supabase tables:
 
 Run these SQL commands in your Supabase SQL Editor:
@@ -210,6 +291,8 @@ In your Vercel project settings:
 | `CRON_SECRET` | Secure secret for cron authentication | Generate with: `openssl rand -base64 32` |
 | `TEST_SECRET` | (Optional) Secret for test endpoints | Generate with: `openssl rand -base64 32` |
 
+**💡 Compatibility Note**: You can also use legacy variable names (e.g., `SUPABASE_URL` instead of `NEXT_PUBLIC_SUPABASE_URL`). See the [Environment Variable Naming Compatibility](#-environment-variable-naming-compatibility) section for details.
+
 ##### Generate Secure Secrets
 
 ```bash
@@ -288,6 +371,7 @@ git push
 - Confirm variables are set for the correct environment (Production/Preview/Development)
 - Redeploy after adding/updating environment variables
 - Check for typos in variable names
+- Try using alternative variable names (see compatibility section)
 
 #### Database Connection Errors
 - Verify Supabase credentials are correct
@@ -418,6 +502,10 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Changelog
 
+- **v2.2.0**: Environment variable naming compatibility
+  - Added support for multiple naming conventions (standard and legacy)
+  - Intelligent fallback system for environment variables
+  - Enhanced documentation for deployment flexibility
 - **v2.1.0**: Security and deployment improvements
   - Removed hardcoded credentials from vercel.json
   - Added comprehensive Vercel deployment documentation
