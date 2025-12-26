@@ -1,0 +1,253 @@
+import { createClient } from '@supabase/supabase-js';
+import { SignJWT } from 'jose';
+import { NextResponse } from 'next/server';
+
+// Initialize Supabase client with service role for server-side operations
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// JWT secret for signing embed tokens
+const JWT_SECRET = process.env.JWT_EMBED_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const JWT_EXPIRATION = '7d'; // Token valid for 7 days
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('Missing required Supabase environment variables');
+}
+
+/**
+ * POST /api/auth/generate-embed-token
+ * 
+ * Generates a JWT token for embed authentication with read-only permissions.
+ * This token can be used to embed ProgressPath dashboards in external applications like Notion.
+ * 
+ * Request body:
+ * - userId: string (optional) - User ID to generate token for. If not provided, uses authenticated user.
+ * - duration: string (optional) - Token expiration duration (e.g., '7d', '30d', '1h'). Default: '7d'
+ * 
+ * Response:
+ * - token: string - JWT token for embed authentication
+ * - embedUrl: string - Complete embed URL with token
+ * - expiresAt: string - ISO timestamp of token expiration
+ * - user: object - User information included in token
+ */
+export async function POST(request) {
+  try {
+    // Parse request body
+    const body = await request.json().catch(() => ({}));
+    const { userId, duration = JWT_EXPIRATION } = body;
+
+    // Get authorization header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Missing or invalid authorization header' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    // Verify user authentication with Supabase
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Invalid or expired authentication token' },
+        { status: 401 }
+      );
+    }
+
+    // Use provided userId or authenticated user's ID
+    const targetUserId = userId || user.id;
+
+    // Fetch user details from database
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, email, full_name, created_at')
+      .eq('id', targetUserId)
+      .single();
+
+    if (userError || !userData) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Calculate expiration timestamp
+    const expirationMs = parseDuration(duration);
+    const expiresAt = new Date(Date.now() + expirationMs);
+
+    // Create JWT payload with read-only permissions
+    const payload = {
+      userId: userData.id,
+      email: userData.email,
+      fullName: userData.full_name,
+      permissions: ['read'], // Read-only access for embed
+      type: 'embed',
+      createdAt: new Date().toISOString(),
+    };
+
+    // Sign JWT token using jose library
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const embedToken = await new SignJWT(payload)
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime(Math.floor(expiresAt.getTime() / 1000))
+      .setSubject(userData.id)
+      .sign(secret);
+
+    // Generate embed URL
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const embedUrl = `${appUrl}/embed?token=${embedToken}`;
+
+    // Return response with token and embed URL
+    return NextResponse.json({
+      success: true,
+      token: embedToken,
+      embedUrl,
+      expiresAt: expiresAt.toISOString(),
+      user: {
+        id: userData.id,
+        email: userData.email,
+        fullName: userData.full_name,
+      },
+      permissions: ['read'],
+      type: 'embed',
+    });
+
+  } catch (error) {
+    console.error('Error generating embed token:', error);
+    return NextResponse.json(
+      { error: 'Failed to generate embed token', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * GET /api/auth/generate-embed-token
+ * 
+ * Alternative method for generating embed token via GET request with query parameters.
+ * Useful for simple integrations where POST is not convenient.
+ * 
+ * Query parameters:
+ * - duration: string (optional) - Token expiration duration. Default: '7d'
+ * 
+ * Requires Authorization header with Bearer token.
+ */
+export async function GET(request) {
+  try {
+    // Get query parameters
+    const { searchParams } = new URL(request.url);
+    const duration = searchParams.get('duration') || JWT_EXPIRATION;
+
+    // Get authorization header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Missing or invalid authorization header' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7);
+
+    // Verify user authentication with Supabase
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Invalid or expired authentication token' },
+        { status: 401 }
+      );
+    }
+
+    // Fetch user details from database
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, email, full_name, created_at')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || !userData) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Calculate expiration timestamp
+    const expirationMs = parseDuration(duration);
+    const expiresAt = new Date(Date.now() + expirationMs);
+
+    // Create JWT payload with read-only permissions
+    const payload = {
+      userId: userData.id,
+      email: userData.email,
+      fullName: userData.full_name,
+      permissions: ['read'],
+      type: 'embed',
+      createdAt: new Date().toISOString(),
+    };
+
+    // Sign JWT token
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const embedToken = await new SignJWT(payload)
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime(Math.floor(expiresAt.getTime() / 1000))
+      .setSubject(userData.id)
+      .sign(secret);
+
+    // Generate embed URL
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const embedUrl = `${appUrl}/embed?token=${embedToken}`;
+
+    // Return response
+    return NextResponse.json({
+      success: true,
+      token: embedToken,
+      embedUrl,
+      expiresAt: expiresAt.toISOString(),
+      user: {
+        id: userData.id,
+        email: userData.email,
+        fullName: userData.full_name,
+      },
+      permissions: ['read'],
+      type: 'embed',
+    });
+
+  } catch (error) {
+    console.error('Error generating embed token:', error);
+    return NextResponse.json(
+      { error: 'Failed to generate embed token', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Parse duration string to milliseconds
+ * Supports formats like: '7d', '30d', '12h', '60m'
+ */
+function parseDuration(duration) {
+  const units = {
+    s: 1000,
+    m: 60 * 1000,
+    h: 60 * 60 * 1000,
+    d: 24 * 60 * 60 * 1000,
+  };
+
+  const match = duration.match(/^(\d+)([smhd])$/);
+  if (!match) {
+    // Default to 7 days if invalid format
+    return 7 * 24 * 60 * 60 * 1000;
+  }
+
+  const [, value, unit] = match;
+  return parseInt(value) * (units[unit] || units.d);
+}
