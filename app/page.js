@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { BookOpen, Languages, TrendingUp, Target } from 'lucide-react'
+import { BookOpen, Languages, TrendingUp, Target, Settings, Link2 } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'
 import { useAuth } from '../contexts/AuthContext'
 import DailyQuote from '../components/DailyQuote'
@@ -54,6 +54,21 @@ export default function Home() {
             <div className="flex items-center text-purple-600 dark:text-purple-400 font-medium">
               <span>Practice Today</span>
               <Target className="w-4 h-4 ml-2" />
+            </div>
+          </Link>
+
+          {/* Embed Settings Card */}
+          <Link href="/embed/settings" className="card p-8 hover:scale-105 transition-transform duration-200 dark:bg-gray-800 dark:border dark:border-gray-700">
+            <div className="flex items-center justify-center w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full mb-6">
+              <Settings className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Embed Settings</h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              Generate secure embed tokens to integrate your dashboard into Notion and other platforms—share your progress anywhere
+            </p>
+            <div className="flex items-center text-blue-600 dark:text-blue-400 font-medium">
+              <span>Configure Embeds</span>
+              <Link2 className="w-4 h-4 ml-2" />
             </div>
           </Link>
         </div>

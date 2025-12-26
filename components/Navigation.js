@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { BookOpen, Languages, Home, LogOut } from 'lucide-react'
+import { BookOpen, Languages, Home, LogOut, Settings } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useState } from 'react'
 import ThemeToggle from './ThemeToggle'
@@ -35,6 +35,7 @@ export default function Navigation() {
     { href: '/', label: 'Home', icon: Home },
     { href: '/books', label: 'Books', icon: BookOpen },
     { href: '/french', label: 'French', icon: Languages },
+    { href: '/embed/settings', label: 'Embed', icon: Settings },
   ]
 
   return (
