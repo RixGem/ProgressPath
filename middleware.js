@@ -3,7 +3,20 @@ import { jwtVerify } from 'jose';
 
 // Configuration
 const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXT_PUBLIC_JWT_SECRET;
+
+/**
+ * Embed routes that REQUIRE authentication
+ * These routes need a valid JWT token to access
+ */
 const EMBED_ROUTES = ['/embed', '/api/embed'];
+
+/**
+ * Public embed routes that DO NOT require authentication
+ * /embed/settings is public because users need to access it to generate tokens
+ * This is intentional - users must visit this page to create authentication tokens
+ * for embedding their progress dashboards elsewhere.
+ */
+const PUBLIC_EMBED_ROUTES = ['/embed/settings'];
 
 /**
  * Verify JWT token
@@ -57,11 +70,20 @@ function extractToken(request) {
 }
 
 /**
- * Check if the request is for an embed route
+ * Check if the request is for a public embed route (no authentication required)
  * @param {string} pathname - Request pathname
- * @returns {boolean} True if embed route
+ * @returns {boolean} True if public embed route
  */
-function isEmbedRoute(pathname) {
+function isPublicEmbedRoute(pathname) {
+  return PUBLIC_EMBED_ROUTES.some(route => pathname.startsWith(route));
+}
+
+/**
+ * Check if the request is for an embed route that requires authentication
+ * @param {string} pathname - Request pathname
+ * @returns {boolean} True if authenticated embed route
+ */
+function isAuthenticatedEmbedRoute(pathname) {
   return EMBED_ROUTES.some(route => pathname.startsWith(route));
 }
 
@@ -103,15 +125,21 @@ export async function middleware(request) {
     return NextResponse.next();
   }
 
-  // Only apply authentication to embed routes
-  if (!isEmbedRoute(pathname)) {
+  // Allow public access to /embed/settings (no authentication required)
+  // This is necessary because users need to access this page to generate tokens
+  if (isPublicEmbedRoute(pathname)) {
+    return NextResponse.next();
+  }
+
+  // Only apply authentication to protected embed routes
+  if (!isAuthenticatedEmbedRoute(pathname)) {
     return NextResponse.next();
   }
 
   // Extract token from request
   const token = extractToken(request);
 
-  // If no token is provided for embed routes, deny access
+  // If no token is provided for authenticated embed routes, deny access
   if (!token) {
     return new NextResponse(
       JSON.stringify({
