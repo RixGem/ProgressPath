@@ -3,13 +3,27 @@ import { SignJWT } from 'jose';
 import { NextResponse } from 'next/server';
 
 // Initialize Supabase client with service role for server-side operations
+// NEXT_PUBLIC_SUPABASE_URL: URL of your Supabase project instance
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 // Environment Variable Compatibility Layer
 // Supports multiple naming conventions to work across different deployment environments
 // Priority order: primary convention -> alternative convention -> fallback
+
+// Service Role Key: Server-side Supabase admin access key
+// Used for privileged operations that bypass RLS (Row Level Security)
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
-const jwtSecret = process.env.JWT_EMBED_SECRET || process.env.JWTEMBEDSECRET || supabaseServiceKey;
+
+// JWT Secret: Secret key for signing JWT tokens
+// Used to cryptographically sign and verify embed tokens
+// Falls back to service key if no dedicated JWT secret is configured
+const jwtSecret = process.env.JWT_EMBED_SECRET || process.env.JWTEMBEDSECRET || process.env.JWT_SECRET || supabaseServiceKey;
+
+// NEXTPUBLICSUPABASE_URL是Supabase项目URL，而NEXT_PUBLIC_APP_URL是应用部署URL
+// 这两个变量用途不同，但我们可以提供更好的错误信息
+// NEXT_PUBLIC_APP_URL: Your application's deployment URL
+// Used for generating embed URLs that point to your application
+// Falls back to VERCEL_URL (Vercel deployment) or default production URL
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'https://progress-path-one.vercel.app';
 
 // JWT token configuration
@@ -20,7 +34,7 @@ if (!supabaseServiceKey) {
   console.error('Missing Supabase service key: SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY must be set');
 }
 if (!jwtSecret) {
-  console.error('Missing JWT secret: JWT_EMBED_SECRET, JWTEMBEDSECRET or Supabase service key must be set');
+  console.error('Missing JWT secret: JWT_EMBED_SECRET, JWTEMBEDSECRET, JWT_SECRET or Supabase service key must be set');
 }
 if (!supabaseUrl) {
   console.error('Missing Supabase URL: NEXT_PUBLIC_SUPABASE_URL must be set');
