@@ -128,6 +128,24 @@ export async function POST(request) {
       .setSubject(userData.id)
       .sign(secret);
 
+    // Enhanced JWT debugging logs (without exposing sensitive data)
+    console.log('=== JWT Token Generation Debug Info ===');
+    console.log('Token length:', embedToken.length, 'characters');
+    console.log('Token parts count:', embedToken.split('.').length, '(expected: 3 for header.payload.signature)');
+    console.log('Algorithm used: HS256');
+    console.log('Secret configuration:', {
+      secretSource: process.env.JWT_EMBED_SECRET ? 'JWT_EMBED_SECRET' : 
+                    process.env.JWTEMBEDSECRET ? 'JWTEMBEDSECRET' :
+                    process.env.JWT_SECRET ? 'JWT_SECRET' :
+                    supabaseServiceKey ? 'SUPABASE_SERVICE_KEY (fallback)' : 'NOT_CONFIGURED',
+      secretLength: jwtSecret ? jwtSecret.length : 0,
+      secretConfigured: !!jwtSecret
+    });
+    console.log('Token user ID:', userData.id);
+    console.log('Token expiration:', expiresAt.toISOString());
+    console.log('Token type: embed (read-only)');
+    console.log('======================================');
+
     // Generate embed URL with compatibility for different hosting environments
     const embedUrl = `${appUrl}/embed?token=${embedToken}`;
 
@@ -233,6 +251,24 @@ export async function GET(request) {
       .setExpirationTime(Math.floor(expiresAt.getTime() / 1000))
       .setSubject(userData.id)
       .sign(secret);
+
+    // Enhanced JWT debugging logs (without exposing sensitive data)
+    console.log('=== JWT Token Generation Debug Info ===');
+    console.log('Token length:', embedToken.length, 'characters');
+    console.log('Token parts count:', embedToken.split('.').length, '(expected: 3 for header.payload.signature)');
+    console.log('Algorithm used: HS256');
+    console.log('Secret configuration:', {
+      secretSource: process.env.JWT_EMBED_SECRET ? 'JWT_EMBED_SECRET' : 
+                    process.env.JWTEMBEDSECRET ? 'JWTEMBEDSECRET' :
+                    process.env.JWT_SECRET ? 'JWT_SECRET' :
+                    supabaseServiceKey ? 'SUPABASE_SERVICE_KEY (fallback)' : 'NOT_CONFIGURED',
+      secretLength: jwtSecret ? jwtSecret.length : 0,
+      secretConfigured: !!jwtSecret
+    });
+    console.log('Token user ID:', userData.id);
+    console.log('Token expiration:', expiresAt.toISOString());
+    console.log('Token type: embed (read-only)');
+    console.log('======================================');
 
     // Generate embed URL with compatibility for different hosting environments
     const embedUrl = `${appUrl}/embed?token=${embedToken}`;

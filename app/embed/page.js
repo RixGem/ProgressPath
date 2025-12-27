@@ -9,6 +9,7 @@ export default function EmbedPage() {
   const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [debugInfo, setDebugInfo] = useState(null)
   const [totalTime, setTotalTime] = useState(0)
   const [currentStreak, setCurrentStreak] = useState(0)
   const [userId, setUserId] = useState(null)
@@ -51,7 +52,83 @@ export default function EmbedPage() {
         fetchTotalTime(payload.userId)
       ])
     } catch (err) {
-      console.error('Token verification or data fetch error:', err)
+      // Enhanced error logging with detailed information
+      const errorDetails = {
+        name: err.name || 'UnknownError',
+        message: err.message || 'An unknown error occurred',
+        code: err.code || 'N/A',
+        timestamp: new Date().toISOString()
+      }
+
+      console.error('=== JWT Verification Error Details ===')
+      console.error('Error Name:', errorDetails.name)
+      console.error('Error Message:', errorDetails.message)
+      console.error('Error Code:', errorDetails.code)
+      console.error('Timestamp:', errorDetails.timestamp)
+
+      // Check secret configuration (without exposing the actual secret)
+      const secretConfig = process.env.NEXT_PUBLIC_JWT_EMBED_SECRET
+      const secretExists = !!secretConfig
+      const secretLength = secretConfig ? secretConfig.length : 0
+      const isFallback = !secretConfig || secretConfig === 'fallback-secret'
+
+      console.error('Secret Configuration:')
+      console.error('  - Secret exists:', secretExists)
+      console.error('  - Secret length:', secretLength, 'characters')
+      console.error('  - Using fallback:', isFallback)
+
+      // Analyze token structure
+      const urlParams = new URLSearchParams(window.location.search)
+      const token = urlParams.get('token')
+      
+      if (token) {
+        const tokenParts = token.split('.')
+        console.error('Token Analysis:')
+        console.error('  - Token parts count:', tokenParts.length, '(expected: 3)')
+        console.error('  - Has header:', tokenParts.length > 0 ? 'Yes' : 'No')
+        console.error('  - Has payload:', tokenParts.length > 1 ? 'Yes' : 'No')
+        console.error('  - Has signature:', tokenParts.length > 2 ? 'Yes' : 'No')
+
+        // Try to decode header (safe, not sensitive)
+        if (tokenParts.length > 0) {
+          try {
+            const header = JSON.parse(atob(tokenParts[0]))
+            console.error('Token Header:', JSON.stringify(header, null, 2))
+          } catch (decodeErr) {
+            console.error('Failed to decode token header:', decodeErr.message)
+          }
+        }
+
+        // Store debug info for UI display
+        setDebugInfo({
+          error: errorDetails,
+          secret: {
+            exists: secretExists,
+            length: secretLength,
+            isFallback: isFallback
+          },
+          token: {
+            partsCount: tokenParts.length,
+            hasHeader: tokenParts.length > 0,
+            hasPayload: tokenParts.length > 1,
+            hasSignature: tokenParts.length > 2
+          }
+        })
+      } else {
+        console.error('No token found in URL')
+        setDebugInfo({
+          error: errorDetails,
+          secret: {
+            exists: secretExists,
+            length: secretLength,
+            isFallback: isFallback
+          },
+          token: null
+        })
+      }
+
+      console.error('=====================================')
+
       setError(err.message)
       setLoading(false)
     }
@@ -221,7 +298,7 @@ export default function EmbedPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-2xl w-full">
           <div className="text-red-500 mb-4">
             <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -231,9 +308,69 @@ export default function EmbedPage() {
             Unable to Load Dashboard
           </h2>
           <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
             Please check your embed token and try again.
           </p>
+
+          {/* Collapsible Debug Information */}
+          {debugInfo && (
+            <details className="text-left bg-gray-100 dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
+              <summary className="cursor-pointer font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white mb-2">
+                🔍 Debug Information (Click to expand)
+              </summary>
+              <div className="mt-3 space-y-3 text-sm">
+                {/* Error Details */}
+                <div className="bg-red-50 dark:bg-red-900/20 rounded p-3 border border-red-200 dark:border-red-800">
+                  <h3 className="font-semibold text-red-800 dark:text-red-300 mb-2">Error Details:</h3>
+                  <ul className="space-y-1 text-red-700 dark:text-red-400 font-mono text-xs">
+                    <li><strong>Name:</strong> {debugInfo.error.name}</li>
+                    <li><strong>Message:</strong> {debugInfo.error.message}</li>
+                    <li><strong>Code:</strong> {debugInfo.error.code}</li>
+                    <li><strong>Timestamp:</strong> {debugInfo.error.timestamp}</li>
+                  </ul>
+                </div>
+
+                {/* Secret Configuration */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-3 border border-blue-200 dark:border-blue-800">
+                  <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">Secret Configuration:</h3>
+                  <ul className="space-y-1 text-blue-700 dark:text-blue-400 font-mono text-xs">
+                    <li><strong>Exists:</strong> {debugInfo.secret.exists ? '✅ Yes' : '❌ No'}</li>
+                    <li><strong>Length:</strong> {debugInfo.secret.length} characters</li>
+                    <li><strong>Using Fallback:</strong> {debugInfo.secret.isFallback ? '⚠️ Yes (Insecure!)' : '✅ No'}</li>
+                  </ul>
+                </div>
+
+                {/* Token Structure */}
+                {debugInfo.token ? (
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded p-3 border border-yellow-200 dark:border-yellow-800">
+                    <h3 className="font-semibold text-yellow-800 dark:text-yellow-300 mb-2">Token Structure:</h3>
+                    <ul className="space-y-1 text-yellow-700 dark:text-yellow-400 font-mono text-xs">
+                      <li><strong>Parts Count:</strong> {debugInfo.token.partsCount} {debugInfo.token.partsCount === 3 ? '✅' : '❌ (Expected: 3)'}</li>
+                      <li><strong>Has Header:</strong> {debugInfo.token.hasHeader ? '✅ Yes' : '❌ No'}</li>
+                      <li><strong>Has Payload:</strong> {debugInfo.token.hasPayload ? '✅ Yes' : '❌ No'}</li>
+                      <li><strong>Has Signature:</strong> {debugInfo.token.hasSignature ? '✅ Yes' : '❌ No'}</li>
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded p-3 border border-gray-300 dark:border-gray-600">
+                    <p className="text-gray-700 dark:text-gray-300 text-xs font-mono">❌ No token found in URL</p>
+                  </div>
+                )}
+
+                {/* Common Issues */}
+                <div className="bg-purple-50 dark:bg-purple-900/20 rounded p-3 border border-purple-200 dark:border-purple-800">
+                  <h3 className="font-semibold text-purple-800 dark:text-purple-300 mb-2">💡 Common Issues:</h3>
+                  <ul className="list-disc list-inside space-y-1 text-purple-700 dark:text-purple-400 text-xs">
+                    <li>Token has expired (check exp claim)</li>
+                    <li>Secret mismatch between generation and verification</li>
+                    <li>Malformed token structure (should have 3 parts)</li>
+                    <li>Missing or invalid permissions in token payload</li>
+                    <li>URL encoding issues with the token parameter</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+          )}
         </div>
       </div>
     )
