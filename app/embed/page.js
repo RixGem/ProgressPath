@@ -32,9 +32,23 @@ export default function EmbedPage() {
       // Verify token using server-side API
       const payload = await verifyTokenServerSide(token)
 
+      // Enhanced defensive checks: verify payload structure and permissions
+      if (!payload || typeof payload !== 'object') {
+        throw new Error('Invalid token payload structure')
+      }
+
+      if (!payload.permissions || !Array.isArray(payload.permissions)) {
+        throw new Error('Invalid or missing permissions in token payload')
+      }
+
       // Check permissions
-      if (!payload.permissions?.includes('read')) {
+      if (!payload.permissions.includes('read')) {
         throw new Error('Invalid token permissions')
+      }
+
+      // Verify userId exists
+      if (!payload.userId) {
+        throw new Error('Missing userId in token payload')
       }
 
       // Set user ID from token
@@ -71,7 +85,13 @@ export default function EmbedPage() {
       }
 
       const data = await response.json()
-      return data.payload
+      
+      // Fix: Return data.user instead of data.payload to match server response structure
+      if (!data || !data.user) {
+        throw new Error('Invalid response structure from verification endpoint')
+      }
+      
+      return data.user
     } catch (err) {
       console.error('Server-side token verification error:', err)
       throw new Error(`Token verification failed: ${err.message}`)
