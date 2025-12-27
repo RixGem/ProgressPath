@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Calendar, TrendingUp, BookOpen, Flame, MessageSquare, Languages } from 'lucide-react'
-import { jwtVerify } from 'jose'
 
 export default function EmbedPage() {
   const [activities, setActivities] = useState([])
@@ -18,7 +17,7 @@ export default function EmbedPage() {
   }, [])
 
   /**
-   * Verify JWT token from URL and fetch user data
+   * Verify JWT token via server-side API and fetch user data
    */
   async function verifyTokenAndFetchData() {
     try {
@@ -30,12 +29,8 @@ export default function EmbedPage() {
         throw new Error('No embed token provided')
       }
 
-      // Verify JWT token
-      const secret = new TextEncoder().encode(
-        process.env.NEXT_PUBLIC_JWT_EMBED_SECRET || 'fallback-secret'
-      )
-
-      const { payload } = await jwtVerify(token, secret)
+      // Verify token using server-side API
+      const payload = await verifyTokenServerSide(token)
 
       // Check permissions
       if (!payload.permissions?.includes('read')) {
@@ -54,6 +49,32 @@ export default function EmbedPage() {
       console.error('Token verification or data fetch error:', err)
       setError(err.message)
       setLoading(false)
+    }
+  }
+
+  /**
+   * Verify JWT token on server-side by calling API endpoint
+   */
+  async function verifyTokenServerSide(token) {
+    try {
+      const response = await fetch('/api/embed/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Token verification failed')
+      }
+
+      const data = await response.json()
+      return data.payload
+    } catch (err) {
+      console.error('Server-side token verification error:', err)
+      throw new Error(`Token verification failed: ${err.message}`)
     }
   }
 
