@@ -64,6 +64,191 @@ A modern Next.js application to track your learning progress across books and la
 - **Storage**: localStorage for theme preference
 - **AI Integration**: OpenRouter API for daily quote generation
 
+## 🔒 Security & Authentication
+
+ProgressPath implements a robust **two-stage authentication system** for embedded dashboards that combines JWT token authentication with Supabase session management. This architecture ensures that your learning data remains secure and properly scoped to authenticated users.
+
+### Architecture Overview
+
+The security system consists of two primary stages:
+
+1. **JWT Token Authentication** - Validates the embedded dashboard access token
+2. **Supabase Session Conversion** - Converts JWT tokens into authenticated Supabase sessions
+
+### JWT Token Authentication for Embedded Dashboards
+
+When embedding dashboards in external applications (such as Notion, personal websites, or other platforms), ProgressPath uses **JWT (JSON Web Tokens)** to authenticate embed requests:
+
+- **Token Generation**: Secure tokens are generated server-side using the `JWT_EMBED_SECRET` environment variable
+- **Token Structure**: Each token contains:
+  - User identifier (such as email or user ID)
+  - Expiration timestamp (configurable, default 7 days)
+  - Signature to prevent tampering
+- **Token Validation**: All embed requests validate the JWT signature before granting access
+- **URL-Based Authentication**: Tokens are passed as query parameters (e.g., `?token=eyJhbGc...`) for seamless embedding
+
+**Example**: When generating an embed link for your French Learning dashboard:
+```javascript
+// Server-side token generation
+const token = jwt.sign(
+  { email: 'chris@example.com', exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60) },
+  process.env.JWT_EMBED_SECRET
+);
+const embedUrl = `${process.env.NEXT_PUBLIC_APP_URL}/embed/french?token=${token}`;
+```
+
+### JWT to Supabase Session Conversion Process
+
+Once a JWT token is validated, ProgressPath converts it into a **Supabase authenticated session**. This conversion is critical for ensuring database queries are properly authenticated and scoped:
+
+1. **Token Verification**: The JWT token is decoded and verified using the `JWT_EMBED_SECRET`
+2. **User Lookup**: The user identifier from the token is used to retrieve the corresponding Supabase user account
+3. **Session Creation**: A temporary Supabase session is established with appropriate access permissions
+4. **Request Context**: All subsequent database queries are executed within this authenticated session context
+
+This two-stage process ensures that:
+- External embeddings cannot be accessed without a valid token
+- Database access is always authenticated through Supabase
+- User data remains isolated and secure
+
+### Security Benefits of the Two-Stage Authentication
+
+The combination of JWT and Supabase authentication provides multiple layers of security:
+
+#### 🛡️ **Token Expiration & Rotation**
+- JWT tokens have configurable expiration times (default: 7 days)
+- Expired tokens are automatically rejected
+- Token rotation can be implemented for enhanced security
+
+#### 🔐 **Signature-Based Validation**
+- JWT tokens are cryptographically signed using `JWT_EMBED_SECRET`
+- Tampered tokens are immediately detected and rejected
+- Only the server with the secret key can generate valid tokens
+
+#### 👤 **User-Specific Data Access**
+- Each token is tied to a specific user account
+- Supabase Row Level Security (RLS) policies ensure users can only access their own data
+- No cross-user data leakage possible
+
+#### 🚫 **Protection Against Common Attacks**
+- **Token Replay Attacks**: Mitigated by expiration timestamps
+- **Man-in-the-Middle Attacks**: Tokens should be transmitted over HTTPS only
+- **SQL Injection**: Prevented by Supabase's parameterized queries and RLS policies
+- **Unauthorized Access**: Invalid or missing tokens result in access denial
+
+#### 📊 **Data Scoping**
+- All database queries are automatically scoped to the authenticated user
+- Books and French Learning activities are filtered by user identity
+- No manual user ID filtering required in application code
+
+### How Data Access is Properly Scoped to Authenticated Users
+
+ProgressPath ensures that all data access is properly isolated between users through a combination of:
+
+#### **Supabase Row Level Security (RLS) Policies**
+
+When you set up the database, RLS policies should be configured to restrict access:
+
+```sql
+-- Example: Secure RLS policy for books table
+CREATE POLICY "Users can only access their own books" ON books
+  FOR ALL 
+  USING (auth.uid() = user_id);
+
+-- Example: Secure RLS policy for french_learning table
+CREATE POLICY "Users can only access their own learning data" ON french_learning
+  FOR ALL 
+  USING (auth.uid() = user_id);
+```
+
+**Note**: The example SQL in the Getting Started section uses permissive policies (`USING (true)`) for quick setup. For production deployments, replace these with user-scoped policies.
+
+#### **Server-Side Session Management**
+
+Embed API routes handle session creation and validation:
+
+```javascript
+// Example: Embed route validates token and creates Supabase session
+const { data: { user } } = await supabase.auth.getUser(token);
+if (!user) {
+  return new Response('Unauthorized', { status: 401 });
+}
+// All subsequent queries are now scoped to this user
+```
+
+#### **Client-Side Authentication State**
+
+The embedded dashboard components automatically inherit the authenticated session:
+- No additional authentication logic needed in components
+- Supabase client automatically includes authentication headers
+- All queries respect RLS policies
+
+### Environment Variables Required for Secure Operation
+
+For the security system to function properly, the following environment variables **must** be configured:
+
+#### **Required for JWT Token Authentication**
+
+| Variable | Purpose | Example | Generation |
+|----------|---------|---------|------------|
+| `JWT_EMBED_SECRET` | Secret key for signing and verifying JWT tokens | `your_secure_jwt_secret_here` | `openssl rand -base64 32` |
+| `JWT_SECRET` | Alternative/legacy name for JWT secret | `your_secure_jwt_secret_here` | `openssl rand -base64 32` |
+
+**⚠️ Security Requirements**:
+- Must be a strong, randomly generated string (minimum 32 characters)
+- Never commit this value to version control
+- Use different secrets for development, staging, and production
+- Rotate periodically for enhanced security
+
+#### **Required for Supabase Authentication**
+
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project API endpoint | `https://xxxxx.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key for client-side access | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key for server-side operations | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` |
+
+**⚠️ Security Requirements**:
+- Obtain these from your Supabase project dashboard (Settings → API)
+- `SUPABASE_SERVICE_ROLE_KEY` has elevated privileges - never expose on client-side
+- Use environment-specific Supabase projects for development and production
+
+#### **Required for Application Configuration**
+
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `NEXT_PUBLIC_APP_URL` | Base URL for generating embed links | `https://your-app.vercel.app` |
+
+### Best Practices for Secure Embedded Dashboards
+
+1. **Always Use HTTPS**: Ensure your application is served over HTTPS to prevent token interception
+2. **Implement Token Expiration**: Use reasonable expiration times (7-30 days recommended)
+3. **Validate on Every Request**: Never cache authentication results - validate tokens on each request
+4. **Use Environment-Specific Secrets**: Different secrets for development, staging, and production
+5. **Monitor Access Logs**: Track embed access patterns for suspicious activity
+6. **Implement Rate Limiting**: Prevent abuse by limiting embed requests per user/token
+7. **Regular Secret Rotation**: Periodically rotate JWT secrets and regenerate embed tokens
+8. **Audit RLS Policies**: Regularly review Supabase RLS policies to ensure proper data isolation
+
+### Troubleshooting Security Issues
+
+#### Token Validation Failures
+- **Symptom**: "Invalid token" or "Unauthorized" errors
+- **Causes**: Expired token, incorrect `JWT_EMBED_SECRET`, or tampered token
+- **Solution**: Regenerate the embed token with correct secret
+
+#### Data Access Errors
+- **Symptom**: Empty results or "Permission denied" errors
+- **Causes**: RLS policies too restrictive or user not properly authenticated
+- **Solution**: Verify RLS policies and check Supabase session creation
+
+#### Environment Variable Issues
+- **Symptom**: "Missing JWT secret" or configuration errors
+- **Causes**: Environment variables not set or incorrectly named
+- **Solution**: Verify all required variables are set in `.env.local` or Vercel Environment Variables
+
+For additional security documentation and support, see the [Supabase Security Documentation](https://supabase.com/docs/guides/auth/row-level-security) and [JWT.io](https://jwt.io/) for token debugging.
+
 ## Getting Started
 
 ### Prerequisites
@@ -123,7 +308,7 @@ ProgressPath now supports **multiple naming conventions** for environment variab
 The application supports both **standard** (Next.js convention) and **legacy** (deployment platform) variable names:
 
 | Standard Variable Name | Legacy/Alternative Names | Purpose |
-|----------------------|--------------------------|----|
+|----------------------|--------------------------|---------|
 | `NEXT_PUBLIC_SUPABASE_URL` | `NEXTPUBLICSUPABASE_URL`, `SUPABASE_URL` | Supabase项目URL，用于API连接 (Supabase project URL for API connection) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `SUPABASE_ANON_KEY` | Supabase anonymous key |
 | `SUPABASE_SERVICE_ROLE_KEY` | `SUPABASE_SERVICE_KEY` | Supabase service role key |
