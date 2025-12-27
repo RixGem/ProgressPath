@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 
-// Configuration
-const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXT_PUBLIC_JWT_SECRET;
+// ============================================================================
+// SECURITY FIX #1: JWT Secret Protection
+// ============================================================================
+// REMOVED: process.env.NEXT_PUBLIC_JWT_SECRET fallback
+// The JWT secret MUST be server-side only to prevent client exposure
+// Using NEXT_PUBLIC_ prefix exposes the secret to client-side JavaScript
+const JWT_SECRET = process.env.JWT_SECRET;
 
 /**
  * Embed routes that REQUIRE authentication
@@ -24,8 +29,10 @@ const PUBLIC_EMBED_ROUTES = ['/embed/settings'];
  * @returns {Promise<Object|null>} Decoded payload or null if invalid
  */
 async function verifyJWTToken(token) {
+  // SECURITY: Fail if JWT_SECRET is not configured
   if (!JWT_SECRET) {
-    console.error('JWT_SECRET is not configured');
+    console.error('[SECURITY] JWT_SECRET environment variable is not configured');
+    console.error('[SECURITY] Set JWT_SECRET in your environment (NOT NEXT_PUBLIC_JWT_SECRET)');
     return null;
   }
 
@@ -34,7 +41,7 @@ async function verifyJWTToken(token) {
     const { payload } = await jwtVerify(token, secret);
     return payload;
   } catch (error) {
-    console.error('JWT verification failed:', error.message);
+    console.error('[SECURITY] JWT verification failed:', error.message);
     return null;
   }
 }
