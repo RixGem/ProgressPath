@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
+import { jwtVerify } from 'jose';
 
 /**
  * Server-side JWT Verification Endpoint
@@ -42,22 +42,25 @@ function getJWTSecret() {
  * @returns {Object} Decoded token payload
  * @throws {Error} If token is invalid or expired
  */
-function verifyToken(token) {
+async function verifyToken(token) {
   try {
     const secret = getJWTSecret();
-    const decoded = jwt.verify(token, secret, {
+    // Convert secret string to Uint8Array for jose
+    const secretKey = new TextEncoder().encode(secret);
+    
+    // Verify token using jose
+    const { payload } = await jwtVerify(token, secretKey, {
       algorithms: ['HS256'], // Only allow HMAC SHA-256
-      complete: false // Return payload only, not full token
     });
     
-    return decoded;
+    return payload;
   } catch (error) {
-    if (error.name === 'TokenExpiredError') {
+    if (error.code === 'ERR_JWT_EXPIRED') {
       throw new Error('Token has expired');
-    } else if (error.name === 'JsonWebTokenError') {
+    } else if (error.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED') {
       throw new Error('Invalid token signature');
-    } else if (error.name === 'NotBeforeError') {
-      throw new Error('Token not yet valid');
+    } else if (error.code === 'ERR_JWT_CLAIM_VALIDATION_FAILED') {
+      throw new Error('Token claim validation failed');
     } else {
       throw new Error(`Token verification failed: ${error.message}`);
     }
@@ -86,7 +89,7 @@ function validatePermissions(payload) {
     };
   }
 
-  // Check if token has expired (additional check beyond jwt.verify)
+  // Check if token has expired (additional check beyond jwtVerify)
   if (payload.exp && Date.now() >= payload.exp * 1000) {
     return {
       valid: false,
@@ -145,7 +148,7 @@ export async function GET(request) {
     // Verify token signature and expiration
     let payload;
     try {
-      payload = verifyToken(token);
+      payload = await verifyToken(token);
     } catch (error) {
       return NextResponse.json(
         {
@@ -228,7 +231,7 @@ export async function POST(request) {
     // Verify token signature and expiration
     let payload;
     try {
-      payload = verifyToken(token);
+      payload = await verifyToken(token);
     } catch (error) {
       return NextResponse.json(
         {
