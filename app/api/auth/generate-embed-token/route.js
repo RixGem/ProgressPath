@@ -87,16 +87,19 @@ export async function POST(request) {
     // Use provided userId or authenticated user's ID
     const targetUserId = userId || user.id;
 
-    // Fetch user details from database
+    // CRITICAL FIX: Changed from 'users' table to 'user_profiles' table
+    // user_profiles schema: id, display_name, created_at (no email field)
+    // Email is retrieved from auth.users via the authenticated user object
+    // Note: 'full_name' was changed to 'display_name' to match user_profiles schema
     const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, email, full_name, created_at')
+      .from('user_profiles')
+      .select('id, display_name, created_at')
       .eq('id', targetUserId)
       .single();
 
     if (userError || !userData) {
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: 'User profile not found in user_profiles table' },
         { status: 404 }
       );
     }
@@ -106,10 +109,11 @@ export async function POST(request) {
     const expiresAt = new Date(Date.now() + expirationMs);
 
     // Create JWT payload with read-only permissions
+    // Email comes from auth.users (user.email), not from user_profiles table
     const payload = {
       userId: userData.id,
-      email: userData.email,
-      fullName: userData.full_name,
+      email: user.email, // Retrieved from auth.users, not user_profiles
+      fullName: userData.display_name, // Changed from full_name to display_name
       permissions: ['read'], // Read-only access for embed
       type: 'embed',
       createdAt: new Date().toISOString(),
@@ -136,8 +140,8 @@ export async function POST(request) {
       expiresAt: expiresAt.toISOString(),
       user: {
         id: userData.id,
-        email: userData.email,
-        fullName: userData.full_name,
+        email: user.email, // From auth.users
+        fullName: userData.display_name, // From user_profiles
       },
       permissions: ['read'],
       type: 'embed',
@@ -191,16 +195,19 @@ export async function GET(request) {
       );
     }
 
-    // Fetch user details from database
+    // CRITICAL FIX: Changed from 'users' table to 'user_profiles' table
+    // user_profiles schema: id, display_name, created_at (no email field)
+    // Email is retrieved from auth.users via the authenticated user object
+    // Note: 'full_name' was changed to 'display_name' to match user_profiles schema
     const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, email, full_name, created_at')
+      .from('user_profiles')
+      .select('id, display_name, created_at')
       .eq('id', user.id)
       .single();
 
     if (userError || !userData) {
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: 'User profile not found in user_profiles table' },
         { status: 404 }
       );
     }
@@ -210,10 +217,11 @@ export async function GET(request) {
     const expiresAt = new Date(Date.now() + expirationMs);
 
     // Create JWT payload with read-only permissions
+    // Email comes from auth.users (user.email), not from user_profiles table
     const payload = {
       userId: userData.id,
-      email: userData.email,
-      fullName: userData.full_name,
+      email: user.email, // Retrieved from auth.users, not user_profiles
+      fullName: userData.display_name, // Changed from full_name to display_name
       permissions: ['read'],
       type: 'embed',
       createdAt: new Date().toISOString(),
@@ -239,8 +247,8 @@ export async function GET(request) {
       expiresAt: expiresAt.toISOString(),
       user: {
         id: userData.id,
-        email: userData.email,
-        fullName: userData.full_name,
+        email: user.email, // From auth.users
+        fullName: userData.display_name, // From user_profiles
       },
       permissions: ['read'],
       type: 'embed',
