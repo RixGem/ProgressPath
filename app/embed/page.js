@@ -8,20 +8,24 @@ export default function EmbedPage() {
   const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [authStatus, setAuthStatus] = useState('Initializing...')
   const [totalTime, setTotalTime] = useState(0)
   const [currentStreak, setCurrentStreak] = useState(0)
   const [userId, setUserId] = useState(null)
+  const [authenticatedClient, setAuthenticatedClient] = useState(null)
 
   useEffect(() => {
     verifyTokenAndFetchData()
   }, [])
 
   /**
-   * Verify JWT token via server-side API and fetch user data
+   * Two-stage authentication: JWT verification + Supabase session creation
+   * Verify JWT token via server-side API and create authenticated Supabase session
    */
   async function verifyTokenAndFetchData() {
     try {
-      // Get token from URL
+      // Stage 1: Get and validate token from URL
+      setAuthStatus('Validating token...')
       const urlParams = new URLSearchParams(window.location.search)
       const token = urlParams.get('token')
 
@@ -29,7 +33,8 @@ export default function EmbedPage() {
         throw new Error('No embed token provided')
       }
 
-      // Verify token using server-side API
+      // Stage 2: Verify token using server-side API
+      setAuthStatus('Verifying authentication...')
       const payload = await verifyTokenServerSide(token)
 
       // Enhanced defensive checks: verify payload structure and permissions
@@ -51,23 +56,36 @@ export default function EmbedPage() {
         throw new Error('Missing userId in token payload')
       }
 
-      // Set user ID from token
-      setUserId(payload.userId)
+      // Stage 3: Create Supabase session with authenticated token
+      setAuthStatus('Creating secure session...')
+      const authClient = await createSupabaseSession(token, payload.userId)
+      
+      if (!authClient) {
+        throw new Error('Failed to create authenticated Supabase client')
+      }
 
-      // Fetch data with verified user ID
+      // Set authenticated state
+      setUserId(payload.userId)
+      setAuthenticatedClient(authClient)
+
+      // Stage 4: Fetch data with authenticated Supabase client
+      setAuthStatus('Loading your data...')
       await Promise.all([
-        fetchActivities(payload.userId),
-        fetchTotalTime(payload.userId)
+        fetchActivities(payload.userId, authClient),
+        fetchTotalTime(payload.userId, authClient)
       ])
+
+      setAuthStatus('Ready')
     } catch (err) {
-      console.error('Token verification or data fetch error:', err)
+      console.error('Authentication or data fetch error:', err)
       setError(err.message)
+      setAuthStatus('Authentication failed')
       setLoading(false)
     }
   }
 
   /**
-   * Verify JWT token on server-side by calling API endpoint
+   * Stage 1: Verify JWT token on server-side by calling API endpoint
    */
   async function verifyTokenServerSide(token) {
     try {
@@ -86,7 +104,7 @@ export default function EmbedPage() {
 
       const data = await response.json()
       
-      // Fix: Return data.user instead of data.payload to match server response structure
+      // Return data.user to match server response structure
       if (!data || !data.user) {
         throw new Error('Invalid response structure from verification endpoint')
       }
@@ -95,6 +113,57 @@ export default function EmbedPage() {
     } catch (err) {
       console.error('Server-side token verification error:', err)
       throw new Error(`Token verification failed: ${err.message}`)
+    }
+  }
+
+  /**
+   * Stage 2: Create Supabase session using create-supabase-session endpoint
+   * This creates a secure, authenticated Supabase client instead of using service role queries
+   */
+  async function createSupabaseSession(token, userId) {
+    try {
+      const response = await fetch('/api/embed/create-supabase-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to create Supabase session')
+      }
+
+      const data = await response.json()
+      
+      // Validate session creation response
+      if (!data || !data.session) {
+        throw new Error('Invalid session response from server')
+      }
+
+      // Set the session in the Supabase client
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      })
+
+      if (sessionError) {
+        throw new Error(`Failed to set Supabase session: ${sessionError.message}`)
+      }
+
+      // Verify the session was set correctly
+      const { data: { session }, error: getSessionError } = await supabase.auth.getSession()
+      
+      if (getSessionError || !session) {
+        throw new Error('Session verification failed after creation')
+      }
+
+      // Return the authenticated Supabase client
+      return supabase
+    } catch (err) {
+      console.error('Supabase session creation error:', err)
+      throw new Error(`Session creation failed: ${err.message}`)
     }
   }
 
@@ -129,16 +198,27 @@ export default function EmbedPage() {
     return []
   }
 
-  async function fetchActivities(uid) {
+  /**
+   * Fetch activities using authenticated Supabase client
+   * No longer uses service role queries - uses user-scoped authentication
+   */
+  async function fetchActivities(uid, authClient) {
     try {
-      const { data, error } = await supabase
+      if (!authClient) {
+        throw new Error('Authenticated client not available')
+      }
+
+      const { data, error } = await authClient
         .from('french_learning')
         .select('*')
         .eq('user_id', uid)
         .order('date', { ascending: false })
         .limit(10) // Limit for embed view
 
-      if (error) throw error
+      if (error) {
+        throw new Error(`Failed to fetch activities: ${error.message}`)
+      }
+
       setActivities(data || [])
 
       if (data && data.length > 0) {
@@ -196,14 +276,24 @@ export default function EmbedPage() {
     setCurrentStreak(streak)
   }
 
-  async function fetchTotalTime(uid) {
+  /**
+   * Fetch total time using authenticated Supabase client
+   * No longer uses service role queries - uses user-scoped authentication
+   */
+  async function fetchTotalTime(uid, authClient) {
     try {
-      const { data, error } = await supabase
+      if (!authClient) {
+        throw new Error('Authenticated client not available')
+      }
+
+      const { data, error } = await authClient
         .from('french_learning')
         .select('total_time, duration_minutes')
         .eq('user_id', uid)
 
-      if (error) throw error
+      if (error) {
+        throw new Error(`Failed to fetch total time: ${error.message}`)
+      }
 
       const total = data.reduce((sum, record) => {
         const time = record.total_time !== undefined && record.total_time !== null 
@@ -248,17 +338,22 @@ export default function EmbedPage() {
     }
   }
 
+  // Enhanced loading state with authentication status
   if (loading) {
     return (
       <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading French Learning Dashboard...</p>
+          <p className="text-gray-600 dark:text-gray-300 font-medium">{authStatus}</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+            Establishing secure connection...
+          </p>
         </div>
       </div>
     )
   }
 
+  // Enhanced error state with better messaging
   if (error) {
     return (
       <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center p-4">
@@ -269,11 +364,22 @@ export default function EmbedPage() {
             </svg>
           </div>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            Unable to Load Dashboard
+            Authentication Failed
           </h2>
           <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Please check your embed token and try again.
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 text-left">
+            <p className="text-sm text-gray-700 dark:text-gray-300 font-medium mb-2">
+              Possible reasons:
+            </p>
+            <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-disc list-inside">
+              <li>Invalid or expired embed token</li>
+              <li>Token missing required permissions</li>
+              <li>Session creation failed</li>
+              <li>Network connectivity issues</li>
+            </ul>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
+            Please verify your embed token and try again.
           </p>
         </div>
       </div>
@@ -294,6 +400,13 @@ export default function EmbedPage() {
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
             Track your journey to fluency
           </p>
+          {/* Security indicator */}
+          <div className="flex items-center justify-center gap-1 mt-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              Secure authenticated session
+            </span>
+          </div>
         </div>
 
         {/* Stats Grid */}
