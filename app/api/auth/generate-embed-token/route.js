@@ -88,11 +88,11 @@ export async function POST(request) {
     const targetUserId = userId || user.id;
 
     // CRITICAL FIX: Changed from 'users' table to 'user_profiles' table
-    // user_profiles schema: id, full_name, created_at (no email field)
+    // user_profiles schema: id, fullname, created_at (no email field)
     // Email is retrieved from auth.users via the authenticated user object
     const { data: userData, error: userError } = await supabase
       .from('user_profiles')
-      .select('id, full_name, created_at')
+      .select('id, fullname, created_at')
       .eq('id', targetUserId)
       .single();
 
@@ -112,7 +112,7 @@ export async function POST(request) {
     const payload = {
       userId: userData.id,
       email: user.email, // Retrieved from auth.users, not user_profiles
-      fullName: userData.full_name,
+      fullName: userData.fullname,
       permissions: ['read'], // Read-only access for embed
       type: 'embed',
       createdAt: new Date().toISOString(),
@@ -140,7 +140,7 @@ export async function POST(request) {
       user: {
         id: userData.id,
         email: user.email, // From auth.users
-        fullName: userData.full_name, // From user_profiles
+        fullName: userData.fullname, // From user_profiles
       },
       permissions: ['read'],
       type: 'embed',
@@ -195,11 +195,11 @@ export async function GET(request) {
     }
 
     // CRITICAL FIX: Changed from 'users' table to 'user_profiles' table
-    // user_profiles schema: id, full_name, created_at (no email field)
+    // user_profiles schema: id, fullname, created_at (no email field)
     // Email is retrieved from auth.users via the authenticated user object
     const { data: userData, error: userError } = await supabase
       .from('user_profiles')
-      .select('id, full_name, created_at')
+      .select('id, fullname, created_at')
       .eq('id', user.id)
       .single();
 
@@ -219,7 +219,7 @@ export async function GET(request) {
     const payload = {
       userId: userData.id,
       email: user.email, // Retrieved from auth.users, not user_profiles
-      fullName: userData.full_name,
+      fullName: userData.fullname,
       permissions: ['read'],
       type: 'embed',
       createdAt: new Date().toISOString(),
@@ -246,7 +246,7 @@ export async function GET(request) {
       user: {
         id: userData.id,
         email: user.email, // From auth.users
-        fullName: userData.full_name, // From user_profiles
+        fullName: userData.fullname, // From user_profiles
       },
       permissions: ['read'],
       type: 'embed',

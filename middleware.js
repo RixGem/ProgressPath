@@ -37,7 +37,7 @@ async function verifyJWTToken(token) {
   }
 
   try {
-    const secret = new TextEncoder().encode(JWT_SECRET);
+    const secret = new TextEncoder().encode(secretKey);
     const { payload } = await jwtVerify(token, secret);
     return payload;
   } catch (error) {

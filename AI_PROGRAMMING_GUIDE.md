@@ -1,124 +1,191 @@
-# AI编程必看指南 (MUST READ)
-> ⚠️ **重要提示**：所有AI辅助开发者必须在修改此项目前阅读本指南！
+# AI Programming Guide & PR Checklist
 
-## 目录
-- [AI编程最佳实践](#ai编程最佳实践)
-- [环境变量处理原则](#环境变量处理原则)  
-- [项目特定指南](#项目特定指南)
-- [与用户协作原则](#与用户协作原则)
-- [确认已读](#确认已读)
-- [集成到开发流程](#集成到开发流程)
+## 📋 Basic PR Information
 
-## AI编程最佳实践
+**PR Description:**
 
-### 代码质量和一致性标准
-- **保持代码简洁明了**：避免过度复杂的实现，优先选择可读性高的方案
-- **遵循现有代码风格**：与项目中的命名规范、缩进和格式保持一致
-- **变量和函数命名**：使用描述性的名称，避免缩写和模糊的标识符
-- **代码复用**：检查是否存在可复用的函数或组件，避免重复代码
+**Related Issues:**
 
-### 错误处理和边缘情况考虑
-- **全面的错误处理**：为所有可能失败的操作添加try-catch块
-- **输入验证**：验证用户输入和API响应的合法性
-- **边缘情况**：考虑空值、空数组、网络超时等特殊情况
-- **优雅降级**：在功能不可用时提供合理的fallback机制
+**Branch Information:**
 
-### 文档和注释规范
-- **关键逻辑注释**：为复杂的业务逻辑添加清晰的中文注释
-- **函数文档**：使用JSDoc格式为公共函数添加参数和返回值说明
-- **TODO标记**：明确标注待完成的功能和已知问题
-- **变更记录**：在修改现有代码时，简要说明修改原因
-
-## 环境变量处理原则
-
-### 不修改已与用户约定的环境变量名称
-- **保持向后兼容**：绝不改变用户已经配置的环境变量名
-- **谨慎重构**：即使变量名不符合最新规范，也要保持现有约定
-- **文档同步**：确保环境变量文档与实际使用保持一致
-
-### 使用兼容性方案处理多种命名约定
-```javascript
-// 示例：支持多种环境变量命名
-const dbUrl = process.env.DATABASE_URL || 
-              process.env.DB_URL || 
-              process.env.MONGO_URI ||
-              'mongodb://localhost:27017/progresspath';
-```
-
-### 环境变量检查和合理的默认值设置
-- **必需变量检查**：在应用启动时验证关键环境变量
-- **合理默认值**：为开发环境提供可用的默认配置
-- **敏感信息提醒**：在文档中明确说明哪些变量包含敏感信息
-
-## 项目特定指南
-
-### ProgressPath的代码风格和架构
-- **模块化设计**：将功能拆分为独立的模块和组件
-- **RESTful API**：遵循REST设计原则，使用合适的HTTP方法
-- **数据库操作**：使用统一的数据访问层，避免直接在路由中写SQL
-- **前端组件**：保持组件的单一职责原则，便于测试和维护
-
-### 常见陷阱和如何避免
-- **异步操作**：正确使用async/await，避免Promise地狱
-- **内存泄漏**：及时清理事件监听器和定时器
-- **安全漏洞**：对用户输入进行适当的校验和转义
-- **性能问题**：避免在循环中进行数据库查询
-
-### 测试和调试建议
-- **单元测试**：为核心业务逻辑编写单元测试
-- **集成测试**：测试API端点的完整流程
-- **错误日志**：使用结构化日志记录错误信息
-- **调试工具**：善用浏览器开发者工具和Node.js调试器
-
-## 与用户协作原则
-
-### 在生成重大更改前先确认
-- **影响评估**：说明更改可能影响的功能和文件
-- **备份提醒**：建议用户备份重要数据和配置
-- **分步实施**：将大型更改拆分为小步骤，逐步确认
-
-### 提供多种方案让用户选择
-- **方案对比**：列出不同实现方案的优缺点
-- **性能影响**：说明各方案对系统性能的影响
-- **维护成本**：评估长期维护的复杂度
-
-### 清晰解释技术决策和影响
-- **决策理由**：说明选择特定技术方案的原因
-- **权衡考量**：解释在性能、安全性、可维护性间的平衡
-- **未来扩展**：考虑方案的可扩展性和升级路径
-
-## 确认已读
-
-开发者在提交PR前，应确认已阅读并遵守本指南。AI开发者应在PR描述中包含以下声明：
-- ✅ 我已阅读并遵守AI编程指南
-- ✅ 我未修改用户已约定的环境变量名称
-- ✅ 我的代码符合项目的最佳实践和架构模式
-
-## 集成到开发流程
-
-### 开发前准备
-- 每次修改项目代码前，请先阅读此指南
-- 熟悉项目的现有架构和代码风格
-- 检查相关的issue和讨论，了解背景信息
-
-### 代码审核要求
-- PR审核者应检查PR是否遵循了指南要求
-- 验证环境变量使用是否符合兼容性原则
-- 确认代码质量符合项目标准
-
-### 文档维护
-- 将此指南链接添加到项目的CONTRIBUTING.md文件中
-- 在README.md中提及AI编程指南的存在
-- 定期更新指南内容，反映项目的最新实践
+- Source Branch:
+- Target Branch:
 
 ---
 
-## 结语
+## 🔗 Code Dependency Checklist
 
-本指南旨在确保AI辅助开发能够：
-- 产生高质量、可维护的代码
-- 保持与现有系统的兼容性
-- 提供良好的用户体验
-- 降低项目的长期维护成本
+- [ ]  **New dependencies check**: Verified compatibility with Next.js 14 and React 18.
+- [ ]  **Dependency version conflict check**: Ensure no conflicts with `jose`, `@supabase/supabase-js`, or `lucide-react`.
+- [ ]  **package.json updates**: `jsonwebtoken` should be removed; `jose` should be present.
+- [ ]  **Lock file changes**: Verified `package-lock.json` or `yarn.lock` consistency.
+- [ ]  **Security vulnerability scan**: Checked `npm audit` results.
 
-遵循这些原则将帮助我们构建更好的ProgressPath应用。
+---
+
+## 🌍 Environment Variables Check
+
+- [ ]  **New environment variables documented**: Added to `.env.example` and `ENV_CONFIG_GUIDE.md`.
+- [ ]  **Production environment ready**: Variables added to Vercel Project Settings.
+- [ ]  **Security check**: Confirmed NO secrets use `NEXT_PUBLIC_` prefix (especially JWT secrets).
+- [ ]  **Fallback hierarchy**: Verified `JWT_EMBED_SECRET` → `JWT_SECRET` logic is implemented correctly.
+
+---
+
+## 🚀 Deployment Impact Assessment
+
+- [ ]  **Database migration required**: Checked `DATABASE.md` for schema changes (e.g., `french_learning` new fields, `daily_quotes`).
+- [ ]  **Breaking changes identified**: Any API or Schema changes that break existing clients?
+- [ ]  **Rollback plan prepared**: Steps to revert database or code changes.
+- [ ]  **Deployment timing**: Coordinated with cron job schedules (UTC midnight).
+
+---
+
+## 🔒 Security Review
+
+- [ ]  **Authentication/Authorization**: Verified JWT verification using `jose` (Edge compatible).
+- [ ]  **Data Validation**: Implemented input sanitization (UUID, Email) in database operations.
+- [ ]  **API Security**: Rate limiting, CORS headers, and `CRON_SECRET` checks for API routes.
+- [ ]  **Sensitive Data**: Ensured `JWT_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` are never exposed to the client.
+
+---
+
+## 🧪 Testing Plan
+
+- [ ]  **Unit Test Coverage**: `tests/` folder updated (e.g., `userSync.test.js`).
+- [ ]  **Integration Tests**: Verified Embed API and User Sync flows.
+- [ ]  **Manual Testing**:
+    - [ ]  Checked French Learning Dashboard (Vocab/Mood/Stats).
+    - [ ]  Checked Daily Quotes (Display & Cron generation).
+    - [ ]  Checked Dark Mode toggling.
+- [ ]  **Performance Testing**: Verified API response times and database query efficiency.
+
+---
+
+## 📝 Deployment Notes
+
+**Deployment Date:**
+
+**Environment:**
+
+**Known Issues:**
+
+**Monitoring Metrics:**
+
+---
+
+## 📦 Project Dependencies Reference
+
+### Core Dependencies:
+
+- **@supabase/supabase-js**: `^2.39.0` - Database and authentication client.
+- **jose**: `^5.2.0` - JWT verification library. **Replaces `jsonwebtoken`** for better Next.js/Edge runtime compatibility.
+- **lucide-react**: `^0.294.0` - Icon library.
+- **next**: `14.0.4` - React framework.
+- **react**: `^18.2.0` - UI library.
+- **react-dom**: `^18.2.0` - React DOM renderer.
+
+### Dev Dependencies:
+
+- **autoprefixer**: `^10.4.16` - CSS vendor prefixing.
+- **eslint**: `^8.56.0` - Code linting.
+- **eslint-config-next**: `14.0.4` - Next.js ESLint rules.
+- **postcss**: `^8.4.32` - CSS processing.
+- **tailwindcss**: `^3.4.0` - CSS framework.
+
+### Dependency Checklist:
+
+- [ ]  Is the new dependency compatible with `@supabase/supabase-js`?
+- [ ]  Is the new dependency compatible with Next.js 14.0.4?
+- [ ]  Is the new dependency compatible with React 18?
+- [ ]  Does `jose` version support the required algorithms (HS256)?
+- [ ]  Does the change affect TailwindCSS styling?
+- [ ]  Does the change affect Lucide icon rendering?
+
+---
+
+## 🔐 Project Environment Variables Reference
+
+### Supabase Configuration:
+
+- **NEXT_PUBLIC_SUPABASE_URL** (Required) - Supabase Project URL.
+    - Used in: `lib/supabase.js` (with error handling).
+- **NEXT_PUBLIC_SUPABASE_ANON_KEY** (Required) - Supabase Anonymous Key.
+    - Used in: `lib/supabase.js` (with error handling).
+- **SUPABASE_SERVICE_ROLE_KEY** (Required) - Supabase Service Role Key.
+    - Used in: `app/api/embed/verify/route.js` (fallback), `app/api/auth/create-supabase-session/route.js`, `app/api/auth/generate-embed-token/route.js`.
+
+### JWT Security Configuration:
+
+- **JWT_EMBED_SECRET** (Required) - Primary JWT secret for embed functionality.
+    - Used in: `app/api/embed/verify/route.js` (primary).
+    - **Security Note**: Use a securely generated random string (min 32 chars).
+- **JWT_SECRET** (Required) - Alternative/General JWT secret.
+    - Used in: `middleware.js`, `app/api/auth/create-supabase-session/route.js`.
+    - **Fallback Hierarchy**: `JWT_EMBED_SECRET` → `JWT_SECRET` → `SUPABASE_SERVICE_ROLE_KEY`.
+- **~~NEXT_PUBLIC_JWT_SECRET~~** (REMOVED) - ⚠️ **SECURITY RISK**: Removed from project. Do not use.
+    - **Migration Note**: `middleware.js` has been updated to use the secure `JWT_SECRET` (server-side only).
+
+### API Configuration:
+
+- **OPENROUTER_API_KEY** (Required) - API Key for AI quote generation.
+- **OPENROUTER_MODEL_ID** (Optional) - Default: `meta-llama/llama-3.1-8b-instruct:free`.
+
+### Application Configuration:
+
+- **NEXT_PUBLIC_APP_URL** (Required) - Application URL (e.g., `http://localhost:3000` or Vercel domain).
+
+### Security Configuration:
+
+- **CRON_SECRET** (Required) - Protection key for Cron jobs (`/api/cron/*`).
+- **TEST_SECRET** (Optional) - Protection key for Test endpoints (`/api/test/*`).
+
+### Important Code References:
+
+- ✅ `lib/supabase.js`: Added error handling for missing env vars.
+- ✅ `app/api/embed/verify/route.js`: Implements secret fallback hierarchy.
+- ✅ `app/api/auth/create-supabase-session/route.js`: Uses `jose` and strict secret handling.
+- ✅ `middleware.js`: Uses `JWT_SECRET` (removed unsafe `NEXT_PUBLIC_` reference).
+
+### Environment Variables Checklist:
+
+- [ ]  Are new variables added to `.env.example`?
+- [ ]  Are production variables configured in Vercel?
+- [ ]  Are sensitive variables (`JWT_EMBED_SECRET`, `JWT_SECRET`) securely generated?
+- [ ]  Do `NEXT_PUBLIC_` variables actually require client-side access?
+- [ ]  **CRITICAL**: Has `NEXT_PUBLIC_JWT_SECRET` been removed from all environments?
+- [ ]  Is the JWT fallback hierarchy correctly configured?
+- [ ]  Is the Supabase service role key kept server-side only?
+
+---
+
+## 🚀 ProgressPath-Specific Checks
+
+### Feature Modules:
+
+- [ ]  **Books Dashboard**: Reading progress tracking.
+- [ ]  **French Learning Dashboard**: Vocabulary, mood, and practice sentences tracking.
+- [ ]  **Daily Quotes System**: Cron job generation and database storage.
+- [ ]  **Embed Functionality**: JWT generation and verification for external embeds.
+- [ ]  **Dark Mode**: Theme toggle consistency across all pages.
+
+### Database Tables:
+
+- [ ]  **books**: Check for schema changes.
+- [ ]  **french_learning**: Check `new_vocabulary`, `practice_sentences`, `mood`, `total_time`.
+- [ ]  **daily_quotes**: Check `quote`, `author`, `language`, `day_id`.
+- [ ]  **user_profiles**: Check synchronization logic.
+
+### Vercel Deployment Checks:
+
+- [ ]  **Cron Jobs**: Verify configuration for `/api/cron/daily-quotes`.
+- [ ]  **Environment Variables**: Verify all secrets are set in Vercel.
+- [ ]  **Build Limits**: Monitor daily build count (stay under 100).
+- [ ]  **Domains**: Verify SSL and domain configuration.
+
+### Security Checks:
+
+- [ ]  **JWT Handling**: Verify `jose` implementation.
+- [ ]  **RLS Policies**: Ensure Row Level Security is enabled and correct on Supabase.
+- [ ]  **API Protection**: Verify `CRON_SECRET` protects automation endpoints.
+- [ ]  **Client Exposure**: Ensure no sensitive data is logged to the client console.
