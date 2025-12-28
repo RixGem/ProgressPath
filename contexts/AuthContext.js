@@ -103,59 +103,18 @@ export const AuthProvider = ({ children }) => {
   // Initialize session and set up listeners
   useEffect(() => {
     let mounted = true
+    // Track if we've already handled the initial session via subscription
+    let sessionHandled = false
 
-    const initializeAuth = async () => {
-      console.log('[Auth] Initializing...')
-      try {
-        // Create a timeout promise to prevent indefinite hanging
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session initialization timed out')), 5000)
-        )
-
-        // Race between getting session and timeout
-        const { data: { session }, error: sessionError } = await Promise.race([
-          supabase.auth.getSession(),
-          timeoutPromise
-        ])
-        
-        if (sessionError) {
-          throw sessionError
-        }
-
-        console.log('[Auth] Session retrieved:', session ? 'User present' : 'No session')
-
-        if (mounted) {
-          const currentUser = session?.user ?? null
-          setUser(currentUser)
-          
-          // Sync user profile if user exists
-          if (currentUser) {
-            // We don't await this to avoid blocking UI rendering
-            syncUserProfile(currentUser.id).catch(err => console.error('[Auth] Profile sync failed:', err))
-          }
-          
-          setLoading(false)
-          console.log('[Auth] Initialization complete, loading: false')
-        }
-      } catch (err) {
-        console.error('[Auth] Error initializing:', err)
-        if (mounted) {
-          // Even on error, we must stop loading to show the app (likely in unauthenticated state)
-          setError(err.message)
-          setLoading(false)
-          console.log('[Auth] Initialization failed, loading: false (forced)')
-        }
-      }
-    }
-
-    initializeAuth()
-
-    // Set up auth state change listener
+    // Set up auth state change listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('[Auth] State change:', event)
         
         if (!mounted) return
+
+        // Mark as handled so getSession doesn't overwrite/race
+        sessionHandled = true
 
         const currentUser = session?.user ?? null
         setUser(currentUser)
@@ -164,7 +123,7 @@ export const AuthProvider = ({ children }) => {
 
         // Sync profile on sign in or token refresh
         if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED')) {
-          await syncUserProfile(currentUser.id)
+          await syncUserProfile(currentUser.id).catch(err => console.error('[Auth] Profile sync failed:', err))
         }
 
         // Handle sign out
@@ -184,6 +143,58 @@ export const AuthProvider = ({ children }) => {
         }
       }
     )
+
+    // Fallback initialization: check session manually if subscription didn't fire immediately
+    const initializeAuth = async () => {
+      console.log('[Auth] Initializing fallback check...')
+      try {
+        // Short delay to let subscription fire first if it's going to
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        if (sessionHandled) {
+          console.log('[Auth] Session already handled by subscription, skipping fallback')
+          return
+        }
+
+        // Create a timeout promise
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session initialization timed out')), 5000)
+        )
+
+        // Race between getting session and timeout
+        const { data: { session }, error: sessionError } = await Promise.race([
+          supabase.auth.getSession(),
+          timeoutPromise
+        ])
+        
+        if (sessionError) {
+          throw sessionError
+        }
+
+        console.log('[Auth] Fallback session retrieved:', session ? 'User present' : 'No session')
+
+        if (mounted && !sessionHandled) {
+          const currentUser = session?.user ?? null
+          setUser(currentUser)
+          
+          if (currentUser) {
+            syncUserProfile(currentUser.id).catch(err => console.error('[Auth] Profile sync failed:', err))
+          }
+          
+          setLoading(false)
+          console.log('[Auth] Fallback initialization complete')
+        }
+      } catch (err) {
+        console.error('[Auth] Error in fallback initialization:', err)
+        if (mounted && !sessionHandled) {
+          setError(err.message)
+          setLoading(false)
+          console.log('[Auth] Fallback initialization failed, loading: false (forced)')
+        }
+      }
+    }
+
+    initializeAuth()
 
     // Set up periodic session check (every 5 minutes)
     sessionCheckInterval.current = setInterval(async () => {
