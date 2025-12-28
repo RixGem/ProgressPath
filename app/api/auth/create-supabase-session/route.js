@@ -128,14 +128,14 @@ export async function POST(request) {
     }
 
     // Step 4: Session Creation - Create a new Supabase session for the user
-    let sessionData, sessionError;
+    let session, sessionError;
 
     // Strategy 1: Admin createSession (Best, if available)
     if (typeof supabaseAdmin.auth.admin.createSession === 'function') {
       const result = await supabaseAdmin.auth.admin.createSession({
         user_id: userId
       });
-      sessionData = result.data.session;
+      session = result.data?.session;
       sessionError = result.error;
     } 
     // Strategy 2: Manual JWT Minting (Robust, requires valid JWT_SECRET)
@@ -163,7 +163,7 @@ export async function POST(request) {
         .setExpirationTime(now + 3600) // 1 hour expiration
         .sign(secret);
 
-        sessionData = {
+        session = {
           access_token: accessToken,
           refresh_token: 'dummy_refresh_token_manual_mint', // Dummy token, refresh won't work but session validates
           expires_in: 3600,
@@ -178,7 +178,7 @@ export async function POST(request) {
     }
 
     // Strategy 3: Magic Link Fallback (Last resort, handles Legacy/PKCE flows)
-    if (!sessionData && !sessionError) {
+    if (!session && !sessionError) {
       console.log('[Auth] Attempting fallback to generateLink flow');
       // Fallback for older SDKs: Generate magic link -> Verify OTP -> Session
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
@@ -202,7 +202,7 @@ export async function POST(request) {
       if (authCode) {
         // Handle PKCE flow (newer Supabase versions)
         const result = await supabaseAdmin.auth.exchangeCodeForSession(authCode);
-        sessionData = result.data.session;
+        session = result.data?.session;
         sessionError = result.error;
       } else if (verifyToken) {
         // Handle Legacy flow
@@ -211,7 +211,7 @@ export async function POST(request) {
           token: verifyToken,
           type: 'magiclink'
         });
-        sessionData = result.data.session;
+        session = result.data?.session;
         sessionError = result.error;
       } else {
         throw new Error('Fallback failed: No token or code in action link');
@@ -226,7 +226,7 @@ export async function POST(request) {
       );
     }
 
-    if (!sessionData || !sessionData.session) {
+    if (!session) {
       console.error('Session data missing after creation');
       return NextResponse.json(
         { error: 'Session creation failed', message: 'Session was not properly created' },
@@ -238,11 +238,11 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       session: {
-        access_token: sessionData.session.access_token,
-        refresh_token: sessionData.session.refresh_token,
-        expires_in: sessionData.session.expires_in,
-        expires_at: sessionData.session.expires_at,
-        token_type: sessionData.session.token_type,
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+        expires_in: session.expires_in,
+        expires_at: session.expires_at,
+        token_type: session.token_type,
         user: {
           id: userData.user.id,
           email: userData.user.email,
