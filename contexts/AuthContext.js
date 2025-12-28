@@ -105,6 +105,7 @@ export const AuthProvider = ({ children }) => {
     let mounted = true
 
     const initializeAuth = async () => {
+      console.log('[Auth] Initializing...')
       try {
         // Create a timeout promise to prevent indefinite hanging
         const timeoutPromise = new Promise((_, reject) => 
@@ -121,6 +122,8 @@ export const AuthProvider = ({ children }) => {
           throw sessionError
         }
 
+        console.log('[Auth] Session retrieved:', session ? 'User present' : 'No session')
+
         if (mounted) {
           const currentUser = session?.user ?? null
           setUser(currentUser)
@@ -128,17 +131,19 @@ export const AuthProvider = ({ children }) => {
           // Sync user profile if user exists
           if (currentUser) {
             // We don't await this to avoid blocking UI rendering
-            syncUserProfile(currentUser.id).catch(console.error)
+            syncUserProfile(currentUser.id).catch(err => console.error('[Auth] Profile sync failed:', err))
           }
           
           setLoading(false)
+          console.log('[Auth] Initialization complete, loading: false')
         }
       } catch (err) {
-        console.error('Error initializing auth:', err)
+        console.error('[Auth] Error initializing:', err)
         if (mounted) {
           // Even on error, we must stop loading to show the app (likely in unauthenticated state)
           setError(err.message)
           setLoading(false)
+          console.log('[Auth] Initialization failed, loading: false (forced)')
         }
       }
     }
@@ -148,7 +153,7 @@ export const AuthProvider = ({ children }) => {
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state change:', event)
+        console.log('[Auth] State change:', event)
         
         if (!mounted) return
 
