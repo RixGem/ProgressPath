@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { jwtVerify, SignJWT } from 'jose';
+import { jwtVerify } from 'jose';
 
 /**
  * Get JWT secret using the same hierarchy as the generation endpoint
@@ -137,91 +137,64 @@ export async function POST(request) {
       });
       session = result.data?.session;
       sessionError = result.error;
-    } 
-    // Strategy 2: Manual JWT Minting (Robust, requires valid JWT_SECRET)
-    else if (process.env.JWT_SECRET) {
-      console.log('[Auth] createSession missing, attempting manual JWT minting');
+    } else {
+      console.log('[Auth] createSession missing, attempting fallback to generateLink flow');
+      
+      // Strategy 2: Magic Link Fallback
       try {
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-        const now = Math.floor(Date.now() / 1000);
-        
-        // Construct standard Supabase Access Token payload
-        const accessToken = await new SignJWT({
-          aud: 'authenticated',
-          sub: userData.user.id,
-          email: userData.user.email,
-          phone: userData.user.phone || '',
-          app_metadata: userData.user.app_metadata || { provider: 'email', providers: ['email'] },
-          user_metadata: userData.user.user_metadata || {},
-          role: 'authenticated',
-          aal: 'aal1',
-          amr: [{ method: 'password', timestamp: now }],
-          session_id: crypto.randomUUID()
-        })
-        .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
-        .setIssuedAt(now)
-        .setExpirationTime(now + 3600) // 1 hour expiration
-        .sign(secret);
-
-        session = {
-          access_token: accessToken,
-          refresh_token: 'dummy_refresh_token_manual_mint', // Dummy token, refresh won't work but session validates
-          expires_in: 3600,
-          expires_at: now + 3600,
-          token_type: 'bearer',
-          user: userData.user
-        };
-      } catch (mintError) {
-        console.error('[Auth] Manual minting failed:', mintError);
-        // Fall through to Strategy 3
-      }
-    }
-
-    // Strategy 3: Magic Link Fallback (Last resort, handles Legacy/PKCE flows)
-    if (!session && !sessionError) {
-      console.log('[Auth] Attempting fallback to generateLink flow');
-      // Fallback for older SDKs: Generate magic link -> Verify OTP -> Session
-      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'magiclink',
-        email: userData.user.email
-      });
-
-      if (linkError) {
-        throw new Error(`Fallback generateLink failed: ${linkError.message}`);
-      }
-
-      const actionLink = linkData?.properties?.action_link;
-      if (!actionLink) {
-        throw new Error('Fallback failed: No action link generated');
-      }
-
-      const linkUrl = new URL(actionLink);
-      const authCode = linkUrl.searchParams.get('code');
-      const verifyToken = linkUrl.searchParams.get('token');
-
-      if (authCode) {
-        // Handle PKCE flow (newer Supabase versions)
-        const result = await supabaseAdmin.auth.exchangeCodeForSession(authCode);
-        session = result.data?.session;
-        sessionError = result.error;
-      } else if (verifyToken) {
-        // Handle Legacy flow
-        const result = await supabaseAdmin.auth.verifyOtp({
-          email: userData.user.email,
-          token: verifyToken,
-          type: 'magiclink'
+        const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+          type: 'magiclink',
+          email: userData.user.email
         });
-        session = result.data?.session;
-        sessionError = result.error;
-      } else {
-        throw new Error('Fallback failed: No token or code in action link');
+
+        if (linkError) throw linkError;
+
+        const actionLink = linkData?.properties?.action_link;
+        if (!actionLink) throw new Error('No action link generated');
+
+        console.log('[Auth] Generated Link params:', actionLink.split('?')[1]);
+
+        const linkUrl = new URL(actionLink);
+        const authCode = linkUrl.searchParams.get('code');
+        const verifyToken = linkUrl.searchParams.get('token');
+        const tokenHash = linkUrl.searchParams.get('token_hash');
+
+        if (authCode) {
+          console.log('[Auth] Using PKCE code flow');
+          const result = await supabaseAdmin.auth.exchangeCodeForSession(authCode);
+          session = result.data?.session;
+          sessionError = result.error;
+        } else if (tokenHash) {
+          console.log('[Auth] Using token_hash flow');
+          const result = await supabaseAdmin.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'email',
+            email: userData.user.email
+          });
+          session = result.data?.session;
+          sessionError = result.error;
+        } else if (verifyToken) {
+          console.log('[Auth] Using legacy token flow');
+          const result = await supabaseAdmin.auth.verifyOtp({
+            email: userData.user.email,
+            token: verifyToken,
+            type: 'magiclink'
+          });
+          session = result.data?.session;
+          sessionError = result.error;
+        } else {
+          throw new Error('No valid token/code found in link');
+        }
+      } catch (e) {
+        console.error('[Auth] Fallback failed:', e);
+        sessionError = e;
       }
     }
 
     if (sessionError) {
       console.error('Session creation failed:', sessionError);
       return NextResponse.json(
-        { error: 'Session creation failed', message: 'Unable to create Supabase session' },
+        { error: 'Session creation failed', message: 'Unable to create Supabase session', details: sessionError.message },
         { status: 500 }
       );
     }

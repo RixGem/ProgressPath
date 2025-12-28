@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 
 const AuthContext = createContext({})
 
@@ -20,9 +20,16 @@ export const AuthProvider = ({ children }) => {
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState(null)
   const router = useRouter()
+  const pathname = usePathname()
+  const pathnameRef = useRef(pathname)
   const sessionCheckInterval = useRef(null)
   const syncAttempts = useRef(0)
   const MAX_SYNC_ATTEMPTS = 3
+
+  // Update pathname ref when it changes
+  useEffect(() => {
+    pathnameRef.current = pathname
+  }, [pathname])
 
   // Sync user profile data from database
   const syncUserProfile = useCallback(async (userId) => {
@@ -149,7 +156,11 @@ export const AuthProvider = ({ children }) => {
         if (event === 'SIGNED_OUT') {
           setUser(null)
           syncAttempts.current = 0
-          router.push('/login')
+          
+          // Only redirect if NOT on an embed page
+          if (!pathnameRef.current?.startsWith('/embed')) {
+            router.push('/login')
+          }
         }
 
         // Handle password recovery
