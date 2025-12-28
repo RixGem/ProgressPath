@@ -1,6 +1,26 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import jwt from 'jsonwebtoken';
+import { jwtVerify } from 'jose';
+
+/**
+ * Get JWT secret using the same hierarchy as the generation endpoint
+ * Priority order:
+ * 1. JWT_EMBED_SECRET - Dedicated secret for embed tokens
+ * 2. JWT_SECRET - Alternative naming convention
+ * 3. SUPABASE_SERVICE_ROLE_KEY - Fallback for backward compatibility
+ */
+function getJWTSecret() {
+  const secret = 
+    process.env.JWT_EMBED_SECRET || 
+    process.env.JWT_SECRET || 
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!secret) {
+    throw new Error('JWT secret not configured');
+  }
+  
+  return secret;
+}
 
 /**
  * POST /api/auth/create-supabase-session
@@ -25,10 +45,9 @@ export async function POST(request) {
     // Verify environment variables
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const jwtSecret = process.env.JWT_SECRET;
 
-    if (!supabaseUrl || !supabaseServiceKey || !jwtSecret) {
-      console.error('Missing required environment variables');
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing required environment variables for Supabase');
       return NextResponse.json(
         { error: 'Configuration error', message: 'Server configuration is incomplete' },
         { status: 500 }
@@ -36,26 +55,22 @@ export async function POST(request) {
     }
 
     // Step 1: JWT Verification
-    let decoded;
+    let payload;
     try {
-      decoded = jwt.verify(token, jwtSecret);
+      const secret = getJWTSecret();
+      const secretKey = new TextEncoder().encode(secret);
+      const verified = await jwtVerify(token, secretKey);
+      payload = verified.payload;
     } catch (jwtError) {
       console.error('JWT verification failed:', jwtError);
       
-      if (jwtError.name === 'TokenExpiredError') {
+      if (jwtError.code === 'ERR_JWT_EXPIRED') {
         return NextResponse.json(
           { error: 'Token expired', message: 'The provided token has expired' },
           { status: 401 }
         );
       }
       
-      if (jwtError.name === 'JsonWebTokenError') {
-        return NextResponse.json(
-          { error: 'Invalid token', message: 'The provided token is invalid' },
-          { status: 401 }
-        );
-      }
-
       return NextResponse.json(
         { error: 'Authentication failed', message: 'Token verification failed' },
         { status: 401 }
@@ -63,7 +78,7 @@ export async function POST(request) {
     }
 
     // Extract user information from decoded token
-    const { userId, email } = decoded;
+    const { userId, email } = payload;
 
     if (!userId) {
       return NextResponse.json(

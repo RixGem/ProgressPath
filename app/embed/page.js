@@ -122,7 +122,7 @@ export default function EmbedPage() {
    */
   async function createSupabaseSession(token, userId) {
     try {
-      const response = await fetch('/api/embed/create-supabase-session', {
+      const response = await fetch('/api/auth/create-supabase-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
