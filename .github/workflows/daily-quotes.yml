@@ -1,0 +1,35 @@
+name: Daily Quotes Generator
+
+on:
+  schedule:
+    # Run at 00:00 UTC every day
+    - cron: '0 0 * * *'
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+
+jobs:
+  generate-quotes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10 # Allow up to 10 minutes (plenty of time)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Quotes
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL_ID: ${{ vars.OPENROUTER_MODEL_ID || 'google/gemini-2.0-flash-lite-preview-02-05:free' }}
+          NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL || 'https://progresspath.vercel.app' }}
+        run: node scripts/generate-quotes.js

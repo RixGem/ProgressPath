@@ -1,108 +1,60 @@
-# Daily Quotes System Documentation
+# Daily Quotes System Documentation (GitHub Actions)
 
 ## Overview
 
-The Daily Quotes system is a full-stack feature that generates, stores, and displays multilingual motivational quotes. It consists of:
-1.  **Backend**: An automated Cron Job that generates fresh quotes daily using AI.
-2.  **Database**: A Supabase table storing the quotes.
-3.  **Frontend**: A React component that efficiently fetches and caches these quotes for display.
+The Daily Quotes system has been migrated from Vercel Serverless Functions to **GitHub Actions** to bypass execution time limits and ensure reliable generation of multilingual AI quotes.
+
+## Architecture
+
+1.  **Script**: `scripts/generate-quotes.js`
+    -   A standalone Node.js script that handles the logic:
+        -   Connects to OpenRouter AI (Gemini Flash Lite).
+        -   Generates 30 quotes in batches.
+        -   Connects to Supabase.
+        -   Deletes old quotes and inserts new ones.
+    
+2.  **Automation**: `.github/workflows/daily-quotes.yml`
+    -   **Schedule**: Runs automatically every day at 00:00 UTC.
+    -   **Manual Trigger**: Can be manually triggered from the "Actions" tab in GitHub.
+    -   **Timeout**: Configured with a 10-minute timeout (plenty of buffer).
+
+3.  **Frontend**: `components/DailyQuote.js` (Unchanged)
+    -   Fetches quotes directly from Supabase `daily_quotes` table.
+    -   Falls back to local quotes if the table is empty.
 
 ---
 
-## 1. Backend: Automated Generation (Cron Job)
+## Setup Guide
 
-**Endpoint**: `/app/api/cron/daily-quotes/route.js`  
-**Schedule**: Daily at 00:00 UTC
+### 1. GitHub Secrets
+To make this work, you must configure the following **Secrets** in your GitHub Repository settings (`Settings` -> `Secrets and variables` -> `Actions` -> `New repository secret`):
 
-### Functionality
--   **AI Generation**: Uses OpenRouter API (Llama 3, GPT-4, etc.) to generate 30 fresh quotes.
--   **Multilingual**: Supports English (~60%), Chinese (~15%), French (~15%), and others.
--   **Robustness**:
-    -   **Retries**: Exponential backoff (3 attempts) for API calls.
-    -   **Batching**: Processes quotes in batches of 5 to manage memory/rate limits.
-    -   **Atomic Updates**: Transaction-like behavior with rollback on failure.
-    -   **Validation**: Pre-flight checks for environment variables.
+| Secret Name | Value |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase Project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Your Supabase Service Role Key (starts with `ey...`) |
+| `OPENROUTER_API_KEY` | Your OpenRouter API Key |
 
-### Configuration
-Required Environment Variables:
-```env
-NEXT_PUBLIC_SUPABASE_URL=...
-SUPABASE_SERVICE_ROLE_KEY=...
-OPENROUTER_API_KEY=...
-CRON_SECRET=...
-```
+### 2. GitHub Variables (Optional)
+You can configure these under the "Variables" tab if you want to change defaults without editing code:
+
+| Variable Name | Default Value | Description |
+|---|---|---|
+| `OPENROUTER_MODEL_ID` | `google/gemini-2.0-flash-lite-preview-02-05:free` | The AI model to use. |
+| `NEXT_PUBLIC_APP_URL` | `https://progresspath.vercel.app` | Your Vercel domain. |
 
 ---
 
-## 2. Frontend: Display Component (`DailyQuote.js`)
+## How to Run Manually
 
-**Location**: `components/DailyQuote.js`
+1.  Go to your GitHub repository.
+2.  Click on the **Actions** tab.
+3.  Select **Daily Quotes Generator** from the left sidebar.
+4.  Click the **Run workflow** dropdown button on the right.
+5.  Click the green **Run workflow** button.
 
-### Functionality
-The component has been migrated from using external APIs (Zen Quotes) to querying our own Supabase database.
+## Troubleshooting
 
-1.  **Direct Database Query**:
-    -   Fetches a random quote directly from the `daily_quotes` table.
-    -   Performance: ~100-300ms (vs 500ms+ for external API).
-    -   Logic:
-        1.  Gets total count of quotes.
-        2.  Calculates a random offset.
-        3.  Fetches the single row at that offset.
-
-2.  **Session Caching**:
-    -   Stores the fetched quote in `sessionStorage`.
-    -   Ensures the user sees the **same quote** throughout their browser session.
-    -   Fetches a new quote only on a new tab or window.
-
-3.  **Resilience**:
-    -   **Fallbacks**: If the DB query fails or user is offline, it falls back to a hardcoded list of 18 curated quotes.
-    -   **Loading States**: Smooth "Loading inspiration..." animation.
-
-### Code Example (Simplified)
-```javascript
-// Fetch random quote from Supabase
-const { count } = await supabase.from('daily_quotes').select('*', { count: 'exact', head: true });
-const randomOffset = Math.floor(Math.random() * count);
-const { data } = await supabase.from('daily_quotes').select('*').range(randomOffset, randomOffset).single();
-```
-
----
-
-## 3. Database Schema
-
-**Table**: `daily_quotes`
-
-```sql
-CREATE TABLE daily_quotes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  quote TEXT NOT NULL,
-  author TEXT NOT NULL,
-  language TEXT NOT NULL DEFAULT 'en',
-  translation TEXT,
-  day_id TEXT NOT NULL, -- Format: YYYY-MM-DD
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE INDEX idx_daily_quotes_day_id ON daily_quotes(day_id);
-```
-
----
-
-## 4. Maintenance & Troubleshooting
-
-### Manual Trigger
-You can manually trigger the generation for testing:
-```bash
-curl -X POST https://your-app.vercel.app/api/test/daily-quotes \
-  -H "Authorization: Bearer YOUR_TEST_SECRET"
-```
-
-### Common Issues
--   **Missing Translations**: The frontend handles `null` translations gracefully (only displays if present).
--   **Generation Failures**: Check Vercel logs for "Execution ID". The system logs detailed batch progress.
--   **Stale Quotes**: If the cron job fails, the frontend will continue serving existing quotes from the DB (randomly selected).
-
----
-
-**Version**: 2.0.0
-**Status**: Production Ready
+-   **Workflow Failed**: Click on the failed run in the Actions tab to see the logs. The script prints detailed logs for every step (Batch 1/6, etc.).
+-   **Database Error**: Ensure `SUPABASE_SERVICE_ROLE_KEY` is correct and has write access.
+-   **AI Error**: Check if `OPENROUTER_API_KEY` is valid or if you've hit rate limits.

@@ -2,11 +2,5 @@
   "buildCommand": "next build",
   "devCommand": "next dev",
   "installCommand": "npm install",
-  "framework": "nextjs",
-  "crons": [
-    {
-      "path": "/api/cron/daily-quotes",
-      "schedule": "0 0 * * *"
-    }
-  ]
+  "framework": "nextjs"
 }
