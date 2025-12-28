@@ -172,13 +172,24 @@ Generate a diverse mix: ~60% English, ~15% Chinese, ~15% French, ~10% other lang
     // Remove markdown code blocks if present
     jsonStr = jsonStr.replace(/^```(?:json)?\n?/gm, '').replace(/\n?```$/gm, '');
     
-    // Find JSON array in content
-    const arrayMatch = jsonStr.match(/[\[][\s\S]*[\]]/);
-    if (arrayMatch) {
-      jsonStr = arrayMatch[0];
+    // Find the first '[' and last ']' to isolate the JSON array
+    const firstBracket = jsonStr.indexOf('[');
+    const lastBracket = jsonStr.lastIndexOf(']');
+    
+    if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+      jsonStr = jsonStr.substring(firstBracket, lastBracket + 1);
+    } else {
+      console.warn('⚠️ Could not find JSON array brackets in response, attempting to parse raw content');
     }
 
-    const quotes = JSON.parse(jsonStr);
+    let quotes;
+    try {
+      quotes = JSON.parse(jsonStr);
+    } catch (parseError) {
+      console.error('❌ JSON Parse Error:', parseError.message);
+      console.error('Raw content snippet (first 200 chars):', content.substring(0, 200) + '...');
+      throw new Error(`Failed to parse JSON response: ${parseError.message}`);
+    }
     
     if (!Array.isArray(quotes)) {
       throw new Error('Response is not a valid JSON array');
