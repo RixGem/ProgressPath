@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { Calendar, TrendingUp, BookOpen, Flame, MessageSquare, Languages } from 'lucide-react'
 
 export default function EmbedPage() {
@@ -142,8 +142,26 @@ export default function EmbedPage() {
         throw new Error('Invalid session response from server')
       }
 
-      // Set the session in the Supabase client
-      const { error: sessionError } = await supabase.auth.setSession({
+      // Initialize a local, isolated Supabase client for this embed session
+      // We disable persistence and auto-refresh to avoid "chicken-and-egg" issues
+      // with manual JWT minting and to prevent interfering with the main app's session.
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Missing Supabase configuration')
+      }
+
+      const localClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false
+        }
+      })
+
+      // Set the session in the local client
+      const { error: sessionError } = await localClient.auth.setSession({
         access_token: data.session.access_token,
         refresh_token: data.session.refresh_token,
       })
@@ -153,14 +171,14 @@ export default function EmbedPage() {
       }
 
       // Verify the session was set correctly
-      const { data: { session }, error: getSessionError } = await supabase.auth.getSession()
+      const { data: { session }, error: getSessionError } = await localClient.auth.getSession()
       
       if (getSessionError || !session) {
         throw new Error('Session verification failed after creation')
       }
 
-      // Return the authenticated Supabase client
-      return supabase
+      // Return the authenticated local client
+      return localClient
     } catch (err) {
       console.error('Supabase session creation error:', err)
       throw new Error(`Session creation failed: ${err.message}`)
