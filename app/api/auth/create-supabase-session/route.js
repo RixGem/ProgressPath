@@ -154,18 +154,27 @@ export async function POST(request) {
         throw new Error('Fallback failed: No action link generated');
       }
 
-      const verifyToken = new URL(actionLink).searchParams.get('token');
-      if (!verifyToken) {
-        throw new Error('Fallback failed: No token in action link');
-      }
+      const linkUrl = new URL(actionLink);
+      const authCode = linkUrl.searchParams.get('code');
+      const verifyToken = linkUrl.searchParams.get('token');
 
-      const result = await supabaseAdmin.auth.verifyOtp({
-        email: userData.user.email,
-        token: verifyToken,
-        type: 'magiclink'
-      });
-      sessionData = result.data;
-      sessionError = result.error;
+      if (authCode) {
+        // Handle PKCE flow (newer Supabase versions)
+        const result = await supabaseAdmin.auth.exchangeCodeForSession(authCode);
+        sessionData = result.data.session;
+        sessionError = result.error;
+      } else if (verifyToken) {
+        // Handle Legacy flow
+        const result = await supabaseAdmin.auth.verifyOtp({
+          email: userData.user.email,
+          token: verifyToken,
+          type: 'magiclink'
+        });
+        sessionData = result.data.session;
+        sessionError = result.error;
+      } else {
+        throw new Error('Fallback failed: No token or code in action link');
+      }
     }
 
     if (sessionError) {
