@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { jwtVerify } from 'jose';
+import { jwtVerify, SignJWT } from 'jose';
 
 /**
  * Get JWT secret using the same hierarchy as the generation endpoint
@@ -130,15 +130,56 @@ export async function POST(request) {
     // Step 4: Session Creation - Create a new Supabase session for the user
     let sessionData, sessionError;
 
-    // Check if createSession is available (newer versions)
+    // Strategy 1: Admin createSession (Best, if available)
     if (typeof supabaseAdmin.auth.admin.createSession === 'function') {
       const result = await supabaseAdmin.auth.admin.createSession({
         user_id: userId
       });
-      sessionData = result.data;
+      sessionData = result.data.session;
       sessionError = result.error;
-    } else {
-      console.log('[Auth] createSession not found, falling back to generateLink flow');
+    } 
+    // Strategy 2: Manual JWT Minting (Robust, requires valid JWT_SECRET)
+    else if (process.env.JWT_SECRET) {
+      console.log('[Auth] createSession missing, attempting manual JWT minting');
+      try {
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+        const now = Math.floor(Date.now() / 1000);
+        
+        // Construct standard Supabase Access Token payload
+        const accessToken = await new SignJWT({
+          aud: 'authenticated',
+          sub: userData.user.id,
+          email: userData.user.email,
+          phone: userData.user.phone || '',
+          app_metadata: userData.user.app_metadata || { provider: 'email', providers: ['email'] },
+          user_metadata: userData.user.user_metadata || {},
+          role: 'authenticated',
+          aal: 'aal1',
+          amr: [{ method: 'password', timestamp: now }],
+          session_id: crypto.randomUUID()
+        })
+        .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+        .setIssuedAt(now)
+        .setExpirationTime(now + 3600) // 1 hour expiration
+        .sign(secret);
+
+        sessionData = {
+          access_token: accessToken,
+          refresh_token: 'dummy_refresh_token_manual_mint', // Dummy token, refresh won't work but session validates
+          expires_in: 3600,
+          expires_at: now + 3600,
+          token_type: 'bearer',
+          user: userData.user
+        };
+      } catch (mintError) {
+        console.error('[Auth] Manual minting failed:', mintError);
+        // Fall through to Strategy 3
+      }
+    }
+
+    // Strategy 3: Magic Link Fallback (Last resort, handles Legacy/PKCE flows)
+    if (!sessionData && !sessionError) {
+      console.log('[Auth] Attempting fallback to generateLink flow');
       // Fallback for older SDKs: Generate magic link -> Verify OTP -> Session
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
