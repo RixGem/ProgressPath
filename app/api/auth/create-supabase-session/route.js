@@ -128,9 +128,45 @@ export async function POST(request) {
     }
 
     // Step 4: Session Creation - Create a new Supabase session for the user
-    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.createSession({
-      user_id: userId
-    });
+    let sessionData, sessionError;
+
+    // Check if createSession is available (newer versions)
+    if (typeof supabaseAdmin.auth.admin.createSession === 'function') {
+      const result = await supabaseAdmin.auth.admin.createSession({
+        user_id: userId
+      });
+      sessionData = result.data;
+      sessionError = result.error;
+    } else {
+      console.log('[Auth] createSession not found, falling back to generateLink flow');
+      // Fallback for older SDKs: Generate magic link -> Verify OTP -> Session
+      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'magiclink',
+        email: userData.user.email
+      });
+
+      if (linkError) {
+        throw new Error(`Fallback generateLink failed: ${linkError.message}`);
+      }
+
+      const actionLink = linkData?.properties?.action_link;
+      if (!actionLink) {
+        throw new Error('Fallback failed: No action link generated');
+      }
+
+      const verifyToken = new URL(actionLink).searchParams.get('token');
+      if (!verifyToken) {
+        throw new Error('Fallback failed: No token in action link');
+      }
+
+      const result = await supabaseAdmin.auth.verifyOtp({
+        email: userData.user.email,
+        token: verifyToken,
+        type: 'magiclink'
+      });
+      sessionData = result.data;
+      sessionError = result.error;
+    }
 
     if (sessionError) {
       console.error('Session creation failed:', sessionError);
