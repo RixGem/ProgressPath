@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { jwtVerify } from 'jose';
+import { jwtVerify, SignJWT } from 'jose';
 
 /**
  * Get JWT secret using the same hierarchy as the generation endpoint
@@ -138,56 +138,106 @@ export async function POST(request) {
       session = result.data?.session;
       sessionError = result.error;
     } else {
-      console.log('[Auth] createSession missing, attempting fallback to generateLink flow');
+      console.log('[Auth] createSession missing, attempting fallback strategies');
       
-      // Strategy 2: Magic Link Fallback
+      // Strategy 2: Manual JWT Minting (Robust, requires valid JWT_SECRET)
+      // This bypasses the need for Supabase to generate a session in the DB, 
+      // as Supabase Auth is stateless with JWTs anyway.
       try {
-        const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-          type: 'magiclink',
-          email: userData.user.email
-        });
+        const secretStr = getJWTSecret();
+        // Only attempt if we have a secret to sign with
+        if (secretStr) {
+          console.log('[Auth] Attempting manual JWT minting');
+          const secret = new TextEncoder().encode(secretStr);
+          const now = Math.floor(Date.now() / 1000);
+          
+          // Construct standard Supabase Access Token payload
+          // These claims are what Supabase GoTrue issues
+          const accessToken = await new SignJWT({
+            aud: 'authenticated',
+            sub: userData.user.id,
+            email: userData.user.email,
+            phone: userData.user.phone || '',
+            app_metadata: userData.user.app_metadata || { provider: 'email', providers: ['email'] },
+            user_metadata: userData.user.user_metadata || {},
+            role: 'authenticated',
+            aal: 'aal1',
+            amr: [{ method: 'password', timestamp: now }],
+            session_id: crypto.randomUUID()
+          })
+          .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+          .setIssuedAt(now)
+          .setExpirationTime(now + 3600) // 1 hour expiration
+          .sign(secret);
 
-        if (linkError) throw linkError;
+          session = {
+            access_token: accessToken,
+            // Provide a dummy refresh token. The client won't be able to refresh 
+            // automatically without a DB session, but the initial load will work.
+            refresh_token: 'dummy_refresh_token_manual_mint', 
+            expires_in: 3600,
+            expires_at: now + 3600,
+            token_type: 'bearer',
+            user: userData.user
+          };
+        }
+      } catch (mintError) {
+        console.error('[Auth] Manual minting failed:', mintError);
+        // Fall through to Strategy 3
+      }
 
-        const actionLink = linkData?.properties?.action_link;
-        if (!actionLink) throw new Error('No action link generated');
-
-        console.log('[Auth] Generated Link params:', actionLink.split('?')[1]);
-
-        const linkUrl = new URL(actionLink);
-        const authCode = linkUrl.searchParams.get('code');
-        const verifyToken = linkUrl.searchParams.get('token');
-        const tokenHash = linkUrl.searchParams.get('token_hash');
-
-        if (authCode) {
-          console.log('[Auth] Using PKCE code flow');
-          const result = await supabaseAdmin.auth.exchangeCodeForSession(authCode);
-          session = result.data?.session;
-          sessionError = result.error;
-        } else if (tokenHash) {
-          console.log('[Auth] Using token_hash flow');
-          const result = await supabaseAdmin.auth.verifyOtp({
-            token_hash: tokenHash,
-            type: 'email',
+      // Strategy 3: Magic Link Fallback (Last resort)
+      // Only run if manual minting didn't produce a session
+      if (!session) {
+        console.log('[Auth] Attempting fallback to generateLink flow');
+        try {
+          const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+            type: 'magiclink',
             email: userData.user.email
           });
-          session = result.data?.session;
-          sessionError = result.error;
-        } else if (verifyToken) {
-          console.log('[Auth] Using legacy token flow');
-          const result = await supabaseAdmin.auth.verifyOtp({
-            email: userData.user.email,
-            token: verifyToken,
-            type: 'magiclink'
-          });
-          session = result.data?.session;
-          sessionError = result.error;
-        } else {
-          throw new Error('No valid token/code found in link');
+
+          if (linkError) throw linkError;
+
+          const actionLink = linkData?.properties?.action_link;
+          if (!actionLink) throw new Error('No action link generated');
+
+          console.log('[Auth] Generated Link params:', actionLink.split('?')[1]);
+
+          const linkUrl = new URL(actionLink);
+          const authCode = linkUrl.searchParams.get('code');
+          const verifyToken = linkUrl.searchParams.get('token');
+          const tokenHash = linkUrl.searchParams.get('token_hash');
+
+          if (authCode) {
+            console.log('[Auth] Using PKCE code flow');
+            const result = await supabaseAdmin.auth.exchangeCodeForSession(authCode);
+            session = result.data?.session;
+            sessionError = result.error;
+          } else if (tokenHash) {
+            console.log('[Auth] Using token_hash flow');
+            const result = await supabaseAdmin.auth.verifyOtp({
+              token_hash: tokenHash,
+              type: 'email',
+              email: userData.user.email
+            });
+            session = result.data?.session;
+            sessionError = result.error;
+          } else if (verifyToken) {
+            console.log('[Auth] Using legacy token flow');
+            const result = await supabaseAdmin.auth.verifyOtp({
+              email: userData.user.email,
+              token: verifyToken,
+              type: 'magiclink'
+            });
+            session = result.data?.session;
+            sessionError = result.error;
+          } else {
+            throw new Error('No valid token/code found in link');
+          }
+        } catch (e) {
+          console.error('[Auth] Fallback failed:', e);
+          sessionError = e;
         }
-      } catch (e) {
-        console.error('[Auth] Fallback failed:', e);
-        sessionError = e;
       }
     }
 
