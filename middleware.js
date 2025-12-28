@@ -7,22 +7,7 @@ import { jwtVerify } from 'jose';
 // REMOVED: process.env.NEXT_PUBLIC_JWT_SECRET fallback
 // The JWT secret MUST be server-side only to prevent client exposure
 // Using NEXT_PUBLIC_ prefix exposes the secret to client-side JavaScript
-
-/**
- * Get JWT secret using the same hierarchy as other endpoints
- * Priority order:
- * 1. JWT_EMBED_SECRET - Dedicated secret for embed tokens
- * 2. JWT_SECRET - Alternative naming convention
- * 3. SUPABASE_SERVICE_ROLE_KEY - Fallback for backward compatibility
- */
-function getJWTSecret() {
-  const secret = 
-    process.env.JWT_EMBED_SECRET || 
-    process.env.JWT_SECRET || 
-    process.env.SUPABASE_SERVICE_ROLE_KEY;
-  
-  return secret;
-}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 /**
  * Embed routes that REQUIRE authentication
@@ -44,12 +29,10 @@ const PUBLIC_EMBED_ROUTES = ['/embed/settings'];
  * @returns {Promise<Object|null>} Decoded payload or null if invalid
  */
 async function verifyJWTToken(token) {
-  const secretKey = getJWTSecret();
-  
-  // SECURITY: Fail if no secret is configured
-  if (!secretKey) {
-    console.error('[SECURITY] JWT secret is not configured');
-    console.error('[SECURITY] Set JWT_EMBED_SECRET, JWT_SECRET or SUPABASE_SERVICE_ROLE_KEY');
+  // SECURITY: Fail if JWT_SECRET is not configured
+  if (!JWT_SECRET) {
+    console.error('[SECURITY] JWT_SECRET environment variable is not configured');
+    console.error('[SECURITY] Set JWT_SECRET in your environment (NOT NEXT_PUBLIC_JWT_SECRET)');
     return null;
   }
 
