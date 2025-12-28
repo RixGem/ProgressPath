@@ -6,7 +6,10 @@ import { createClient } from '@supabase/supabase-js';
 // ============================================================================
 
 const DB_TIMEOUT_MS = 10000; // 10 second timeout for DB operations
-const FETCH_TIMEOUT_MS = 30000; // 30 second timeout for internal API calls
+const FETCH_TIMEOUT_MS = 60000; // 60 second timeout for internal API calls
+
+// Allow longer execution for Vercel functions (if plan permits)
+export const maxDuration = 60;
 
 // ============================================================================
 // ENVIRONMENT VALIDATION

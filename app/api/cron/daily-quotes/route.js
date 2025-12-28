@@ -215,6 +215,7 @@ Include quotes in multiple languages (English, Chinese, French, Spanish, etc.) t
 CRITICAL REQUIREMENTS:
 - Return ONLY a valid JSON array
 - NO markdown formatting, NO code blocks, NO additional text
+- Quotes should be SHORT to MEDIUM length (under 30 words) to ensure valid JSON generation.
 - Each quote object MUST have these exact fields:
   * "quote": the quote text in its original language
   * "author": the author's name  
@@ -244,8 +245,8 @@ Generate a diverse mix: ~60% English, ~15% Chinese, ~15% French, ~10% other lang
               content: `Generate exactly ${count} motivational quotes in valid JSON array format. Return ONLY the JSON array, no other text.`
             }
           ],
-          temperature: 0.9,
-          max_tokens: count * 120 // ~120 tokens per quote
+          temperature: 0.7,
+          max_tokens: count * 250 // ~250 tokens per quote to prevent truncation
         })
       },
       API_TIMEOUT_MS
@@ -597,3 +598,4 @@ export async function GET(request) {
 // Prevent caching of this endpoint
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+export const maxDuration = 60;
