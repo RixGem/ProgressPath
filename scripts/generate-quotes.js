@@ -235,31 +235,45 @@ async function generateQuotesInBatches() {
   const allQuotes = [];
   const batches = Math.ceil(TOTAL_QUOTES / BATCH_SIZE);
   
-  console.log(`📦 Generating ${TOTAL_QUOTES} quotes in ${batches} batches of ${BATCH_SIZE}...
-`);
+  console.log(`📦 Generating ${TOTAL_QUOTES} quotes in ${batches} batches of ${BATCH_SIZE}...`);
 
   for (let i = 0; i < batches; i++) {
     const remaining = TOTAL_QUOTES - allQuotes.length;
-    const batchSize = Math.min(BATCH_SIZE, remaining);
+    // Don't request more than needed, but also handle case where previous batches failed
+    // Actually, if a batch failed, we still want to try to get as close to TOTAL_QUOTES as possible?
+    // Or just fill the "slots" for this batch?
+    // Simple approach: Each batch tries to get BATCH_SIZE.
+    // If batch 1 fails, we have 0. Batch 2 tries to get 5. Total 5.
+    // If we want to "catch up", logic is more complex. Let's stick to "best effort" for now.
+    // So just ask for BATCH_SIZE each time until we run out of scheduled batches.
     
-    console.log(`\n🔄 Processing batch ${i + 1}/${batches} (${batchSize} quotes)...
-`);
+    const batchSize = BATCH_SIZE; 
+    
+    console.log(`\n🔄 Processing batch ${i + 1}/${batches} (${batchSize} quotes)...`);
     
     try {
       const batchQuotes = await generateQuotesWithRetry(batchSize);
       allQuotes.push(...batchQuotes);
       
       if (i < batches - 1) {
-        await sleep(500);
+        await sleep(1000); // Increased delay to 1s to be nicer to API
       }
     } catch (error) {
       console.error(`❌ Batch ${i + 1} failed:`, error.message);
-      throw new Error(`Batch processing failed at batch ${i + 1}: ${error.message}`);
+      console.warn(`⚠️ Continuing with remaining batches...`);
     }
   }
 
-  console.log(`\n✅ All batches completed: ${allQuotes.length} total quotes generated
-`);
+  if (allQuotes.length === 0) {
+    throw new Error('Failed to generate any quotes across all batches');
+  }
+
+  if (allQuotes.length < TOTAL_QUOTES) {
+    console.warn(`\n⚠️ Partial success: Generated ${allQuotes.length}/${TOTAL_QUOTES} quotes`);
+  } else {
+    console.log(`\n✅ All batches completed: ${allQuotes.length} total quotes generated`);
+  }
+  
   return allQuotes;
 }
 
