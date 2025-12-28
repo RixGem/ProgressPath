@@ -20,14 +20,18 @@ import { jwtVerify } from 'jose';
  * Get JWT secret using the same hierarchy as the generation endpoint
  * Priority order:
  * 1. JWT_EMBED_SECRET - Dedicated secret for embed tokens
- * 2. JWT_SECRET - Alternative naming convention
- * 3. SUPABASE_SERVICE_ROLE_KEY - Fallback for backward compatibility
+ * 2. JWTEMBEDSECRET - Alternative naming
+ * 3. JWT_SECRET - Alternative naming convention
+ * 4. SUPABASE_SERVICE_ROLE_KEY - Fallback for backward compatibility
+ * 5. SUPABASE_SERVICE_KEY - Alternative fallback
  */
 function getJWTSecret() {
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
   const secret = 
     process.env.JWT_EMBED_SECRET || 
+    process.env.JWTEMBEDSECRET || 
     process.env.JWT_SECRET || 
-    process.env.SUPABASE_SERVICE_ROLE_KEY;
+    supabaseServiceKey;
   
   if (!secret) {
     throw new Error('JWT secret not configured. Please set JWT_EMBED_SECRET, JWT_SECRET, or SUPABASE_SERVICE_ROLE_KEY in environment variables.');
