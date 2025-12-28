@@ -30,6 +30,6 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          OPENROUTER_MODEL_ID: ${{ vars.OPENROUTER_MODEL_ID || 'google/gemini-2.0-flash-lite-preview-02-05:free' }}
+          OPENROUTER_MODEL_ID: ${{ vars.OPENROUTER_MODEL_ID || 'google/gemini-2.0-flash-exp:free' }}
           NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL || 'https://progresspath.vercel.app' }}
         run: node scripts/generate-quotes.js

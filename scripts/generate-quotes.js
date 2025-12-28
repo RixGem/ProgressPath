@@ -108,7 +108,7 @@ async function generateQuotesWithRetry(count, attempt = 0) {
         },
         body: JSON.stringify({
           // Use faster model as default
-          model: process.env.OPENROUTER_MODEL_ID || 'google/gemini-2.0-flash-lite-preview-02-05:free',
+          model: process.env.OPENROUTER_MODEL_ID || 'google/gemini-2.0-flash-exp:free',
           messages: [
             {
               role: 'system',
