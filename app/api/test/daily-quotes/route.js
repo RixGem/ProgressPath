@@ -208,7 +208,15 @@ export async function POST(request) {
 
     // Step 3: Call the cron endpoint internally
     console.log('\n📞 Calling cron endpoint...');
-    const cronUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/cron/daily-quotes`;
+    
+    // Determine base URL with Vercel support
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!baseUrl && process.env.VERCEL_URL) {
+      baseUrl = `https://${process.env.VERCEL_URL}`;
+    }
+    baseUrl = baseUrl || 'http://localhost:3000';
+    
+    const cronUrl = `${baseUrl}/api/cron/daily-quotes`;
     const cronSecret = process.env.CRON_SECRET;
     
     const response = await fetchWithTimeout(
