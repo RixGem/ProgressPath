@@ -2,8 +2,8 @@ name: Daily Quotes Generator
 
 on:
   schedule:
-    # Run at 00:00 UTC every day
-    - cron: '0 0 * * *'
+    # Run at 09:00 UTC every day (Nighttime in US)
+    - cron: '0 9 * * *'
   # Allow manual trigger from GitHub UI
   workflow_dispatch:
 
