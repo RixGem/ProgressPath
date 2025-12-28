@@ -103,102 +103,55 @@ export const AuthProvider = ({ children }) => {
   // Initialize session and set up listeners
   useEffect(() => {
     let mounted = true
-    // Track if we've already handled the initial session via subscription
-    let sessionHandled = false
+    const initStarted = sessionCheckInterval.current // Abuse existing ref or create new one? Better create new one.
+    // Actually, simple ref for "isMounted" is enough if we rely on subscription
+    
+    console.log('[Auth] Setting up listener...')
 
-    // Set up auth state change listener FIRST
+    // 1. Set up listener - this usually fires immediately with current session from localStorage
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[Auth] State change:', event)
+        console.log('[Auth] Event:', event)
         
         if (!mounted) return
-
-        // Mark as handled so getSession doesn't overwrite/race
-        sessionHandled = true
 
         const currentUser = session?.user ?? null
         setUser(currentUser)
         setLoading(false)
-        setError(null)
+        setError(null) // Clear any previous errors
 
-        // Sync profile on sign in or token refresh
-        if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED')) {
-          await syncUserProfile(currentUser.id).catch(err => console.error('[Auth] Profile sync failed:', err))
+        // Sync profile on relevant events
+        if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION')) {
+          syncUserProfile(currentUser.id).catch(err => console.error('[Auth] Profile sync failed:', err))
         }
 
         // Handle sign out
         if (event === 'SIGNED_OUT') {
           setUser(null)
           syncAttempts.current = 0
-          
-          // Only redirect if NOT on an embed page
           if (!pathnameRef.current?.startsWith('/embed')) {
             router.push('/login')
           }
         }
 
-        // Handle password recovery
         if (event === 'PASSWORD_RECOVERY') {
           router.push('/reset-password')
         }
       }
     )
 
-    // Fallback initialization: check session manually if subscription didn't fire immediately
-    const initializeAuth = async () => {
-      console.log('[Auth] Initializing fallback check...')
-      try {
-        // Short delay to let subscription fire first if it's going to
-        await new Promise(resolve => setTimeout(resolve, 100))
-        
-        if (sessionHandled) {
-          console.log('[Auth] Session already handled by subscription, skipping fallback')
-          return
-        }
-
-        // Create a timeout promise
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session initialization timed out')), 5000)
-        )
-
-        // Race between getting session and timeout
-        const { data: { session }, error: sessionError } = await Promise.race([
-          supabase.auth.getSession(),
-          timeoutPromise
-        ])
-        
-        if (sessionError) {
-          throw sessionError
-        }
-
-        console.log('[Auth] Fallback session retrieved:', session ? 'User present' : 'No session')
-
-        if (mounted && !sessionHandled) {
-          const currentUser = session?.user ?? null
-          setUser(currentUser)
-          
-          if (currentUser) {
-            syncUserProfile(currentUser.id).catch(err => console.error('[Auth] Profile sync failed:', err))
-          }
-          
-          setLoading(false)
-          console.log('[Auth] Fallback initialization complete')
-        }
-      } catch (err) {
-        console.error('[Auth] Error in fallback initialization:', err)
-        if (mounted && !sessionHandled) {
-          setError(err.message)
-          setLoading(false)
-          console.log('[Auth] Fallback initialization failed, loading: false (forced)')
-        }
+    // 2. Safety timeout: If Supabase doesn't fire ANY event within 2 seconds, assume no user
+    const safetyTimeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('[Auth] No auth event received, forcing loading: false')
+        setLoading(false)
       }
-    }
-
-    initializeAuth()
+    }, 2000)
 
     // Set up periodic session check (every 5 minutes)
     sessionCheckInterval.current = setInterval(async () => {
       if (mounted) {
+        // We can keep getSession here as it's background and won't block UI
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user && session.user.id !== user?.id) {
           setUser(session.user)
@@ -207,25 +160,24 @@ export const AuthProvider = ({ children }) => {
       }
     }, 5 * 60 * 1000)
 
-    // Listen for storage events (cross-tab synchronization)
+    // Listen for storage events
     const handleStorageChange = (e) => {
       if (e.key === 'supabase.auth.token' && mounted) {
         refreshSession()
       }
     }
-
     window.addEventListener('storage', handleStorageChange)
 
-    // Cleanup
     return () => {
       mounted = false
+      clearTimeout(safetyTimeout)
       subscription?.unsubscribe()
       if (sessionCheckInterval.current) {
         clearInterval(sessionCheckInterval.current)
       }
       window.removeEventListener('storage', handleStorageChange)
     }
-  }, [router, syncUserProfile, refreshSession, user?.id])
+  }, [router, syncUserProfile, refreshSession, user?.id]) // Removed 'loading' from dependency to avoid loop
 
   // Sign in with error handling and retry logic
   const signIn = useCallback(async (email, password, retries = 2) => {
