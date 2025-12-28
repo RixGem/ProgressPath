@@ -106,8 +106,16 @@ export const AuthProvider = ({ children }) => {
 
     const initializeAuth = async () => {
       try {
-        // Get initial session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        // Create a timeout promise to prevent indefinite hanging
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session initialization timed out')), 5000)
+        )
+
+        // Race between getting session and timeout
+        const { data: { session }, error: sessionError } = await Promise.race([
+          supabase.auth.getSession(),
+          timeoutPromise
+        ])
         
         if (sessionError) {
           throw sessionError
@@ -119,7 +127,8 @@ export const AuthProvider = ({ children }) => {
           
           // Sync user profile if user exists
           if (currentUser) {
-            await syncUserProfile(currentUser.id)
+            // We don't await this to avoid blocking UI rendering
+            syncUserProfile(currentUser.id).catch(console.error)
           }
           
           setLoading(false)
@@ -127,6 +136,7 @@ export const AuthProvider = ({ children }) => {
       } catch (err) {
         console.error('Error initializing auth:', err)
         if (mounted) {
+          // Even on error, we must stop loading to show the app (likely in unauthenticated state)
           setError(err.message)
           setLoading(false)
         }
