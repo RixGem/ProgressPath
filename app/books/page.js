@@ -118,6 +118,7 @@ export default function BooksPage() {
     })
     setEditingId(book.id)
     setShowForm(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   function resetForm() {
@@ -184,7 +185,13 @@ export default function BooksPage() {
             <p className="text-gray-600 dark:text-gray-300 mt-2">Track your reading progress</p>
           </div>
           <button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => {
+              if (showForm) {
+                resetForm()
+              } else {
+                setShowForm(true)
+              }
+            }}
             className="btn-primary flex items-center space-x-2"
           >
             {showForm ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
@@ -220,7 +227,7 @@ export default function BooksPage() {
 
         {/* Form */}
         {showForm && (
-          <div className="card p-6 dark:border dark:border-gray-700">
+          <div key={editingId || 'new'} className="card p-6 dark:border dark:border-gray-700">
             <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
               {editingId ? 'Edit Book' : 'Add New Book'}
             </h2>
