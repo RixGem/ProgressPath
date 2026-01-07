@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { validateBookData, validateUser } from '../../lib/validation'
 import { BookOpen, Plus, Edit2, Trash2, Save, X, Star, Calendar, Globe, Tag, FileText } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import { useAuth } from '../../contexts/AuthContext'
@@ -33,6 +34,9 @@ export default function BooksPage() {
 
   async function fetchBooks() {
     try {
+      // Validate user before making database query
+      validateUser(user)
+
       const { data, error } = await supabase
         .from('books')
         .select('*')
@@ -43,6 +47,9 @@ export default function BooksPage() {
       setBooks(data || [])
     } catch (error) {
       console.error('Error fetching books:', error)
+      if (error.message.includes('Authentication required')) {
+        alert('Please log in to view your books.')
+      }
     } finally {
       setLoading(false)
     }
@@ -51,31 +58,27 @@ export default function BooksPage() {
   async function handleSubmit(e) {
     e.preventDefault()
     try {
-      const dataToSave = {
-        title: formData.title,
-        author: formData.author,
-        progress: parseFloat(formData.progress) || 0,
-        status: formData.status,
-        genre: formData.genre || null,
-        rating: parseInt(formData.rating) || null,
-        language_analysis: formData.language_analysis || null,
-        notes: formData.notes || null,
-        date_started: formData.date_started || null,
-        date_finished: formData.date_finished || null,
-        user_id: user.id
-      }
+      // Validate user authentication
+      validateUser(user)
+
+      // Validate and sanitize book data
+      const validatedData = validateBookData(formData, user.id)
 
       if (editingId) {
+        // Update existing book
         const { error } = await supabase
           .from('books')
-          .update(dataToSave)
+          .update(validatedData)
           .eq('id', editingId)
-          .eq('user_id', user.id)
+          .eq('user_id', user.id) // Security: ensure user owns the record
+        
         if (error) throw error
       } else {
+        // Insert new book
         const { error } = await supabase
           .from('books')
-          .insert([dataToSave])
+          .insert([validatedData])
+        
         if (error) throw error
       }
       
@@ -83,7 +86,17 @@ export default function BooksPage() {
       fetchBooks()
     } catch (error) {
       console.error('Error saving book:', error)
-      alert('Error saving book: ' + error.message)
+      
+      // User-friendly error messages
+      if (error.message.includes('Authentication required')) {
+        alert('Please log in to save books.')
+      } else if (error.message.includes('title is required')) {
+        alert('Please enter a book title.')
+      } else if (error.message.includes('author is required')) {
+        alert('Please enter an author name.')
+      } else {
+        alert('Error saving book: ' + error.message)
+      }
     }
   }
 
@@ -91,15 +104,20 @@ export default function BooksPage() {
     if (!confirm('Are you sure you want to delete this book?')) return
     
     try {
+      // Validate user before deletion
+      validateUser(user)
+
       const { error } = await supabase
         .from('books')
         .delete()
         .eq('id', id)
-        .eq('user_id', user.id)
+        .eq('user_id', user.id) // Security: ensure user owns the record
+      
       if (error) throw error
       fetchBooks()
     } catch (error) {
       console.error('Error deleting book:', error)
+      alert('Error deleting book: ' + error.message)
     }
   }
 
