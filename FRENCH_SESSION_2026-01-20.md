@@ -155,22 +155,75 @@ The session felt productive despite the short duration. The concepts clicked wel
 
 For logging in the ProgressPath system:
 
-```
-Activity Type: Grammar
-Duration: 10 minutes
-Date: 2026-01-20
-Mood: good (😊 Good - Felt confident)
-
-New Vocabulary: 
-se perdre, se garer, ne te perds pas, ne te gare pas
-
-Practice Sentences: 
-Ne te perds pas !, Ne vous perdez pas !, Ne te gare pas ici !, Ne nous garons pas trop loin !
-
-Notes: 
-Duolingo session focusing on reflexive verbs (se perdre, se garer) and negative imperatives. 
-Learned proper pronoun placement in negative commands - reflexive pronoun comes BEFORE 
-the verb unlike affirmative imperatives. Very useful for giving directions and warnings.
+```json
+{
+  "date": "2026-01-20",
+  "duration_minutes": 10,
+  "platform": "Duolingo",
+  "activity_type": "Grammar",
+  "mood": "good",
+  "topics_covered": [
+    "Reflexive Verbs (Verbes Pronominaux)",
+    "Negative Imperatives (L'impératif négatif)"
+  ],
+  "vocabulary_learned": [
+    {
+      "word": "se perdre",
+      "translation": "to get lost",
+      "category": "reflexive_verb",
+      "conjugations": [
+        "je me perds",
+        "tu te perds",
+        "il/elle/on se perd",
+        "nous nous perdons",
+        "vous vous perdez",
+        "ils/elles se perdent"
+      ]
+    },
+    {
+      "word": "se garer",
+      "translation": "to park",
+      "category": "reflexive_verb",
+      "conjugations": [
+        "je me gare",
+        "tu te gares",
+        "il/elle/on se gare",
+        "nous nous garons",
+        "vous vous garez",
+        "ils/elles se garent"
+      ]
+    }
+  ],
+  "practice_sentences": [
+    {
+      "french": "Ne te perds pas !",
+      "english": "Don't get lost!",
+      "type": "negative_imperative"
+    },
+    {
+      "french": "Ne vous perdez pas !",
+      "english": "Don't get lost! (formal/plural)",
+      "type": "negative_imperative"
+    },
+    {
+      "french": "Ne te gare pas ici !",
+      "english": "Don't park here!",
+      "type": "negative_imperative"
+    },
+    {
+      "french": "Ne nous garons pas trop loin !",
+      "english": "Let's not park too far!",
+      "type": "negative_imperative"
+    }
+  ],
+  "grammar_concepts": [
+    "Reflexive pronoun placement in statements",
+    "Reflexive pronoun placement in negative imperatives",
+    "Conjugation of reflexive verbs",
+    "Formation of negative commands"
+  ],
+  "notes": "Duolingo session focusing on reflexive verbs (se perdre, se garer) and negative imperatives. Learned proper pronoun placement in negative commands - reflexive pronoun comes BEFORE the verb unlike affirmative imperatives. Very useful for giving directions and warnings."
+}
 ```
 
 ---
