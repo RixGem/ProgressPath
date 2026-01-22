@@ -99,19 +99,19 @@ export default function GermanPage() {
 
         const daysDifference = Math.floor((currentDate - mostRecentActivity) / (1000 * 60 * 60 * 24))
 
+        // Streak is broken if more than 1 day has passed since last activity
         if (daysDifference > 1) {
             setCurrentStreak(0)
             return
         }
 
-        let checkDate = new Date(currentDate)
-        // If no activity today, check from yesterday
-        if (daysDifference === 1) {
-            checkDate.setDate(checkDate.getDate() - 1)
-        }
+        // Start checking from the most recent activity date
+        // This ensures we count the first day correctly
+        let checkDate = new Date(mostRecentActivity)
 
         const activityDates = new Set(sortedActivities.map(a => a.date))
 
+        // Count consecutive days backward from the most recent activity
         while (true) {
             const dateStr = checkDate.toISOString().split('T')[0]
             if (activityDates.has(dateStr)) {
@@ -506,9 +506,9 @@ export default function GermanPage() {
                                                 {activity.notes && (
                                                     <p className="text-gray-600 dark:text-gray-300 text-sm mt-2">{activity.notes}</p>
                                                 )}
-                                            </div>
-                                        </div>
-                                    </div>
+                            </div>
+                        </div>
+                    </div>
                                 )
                             })}
                         </div>

@@ -120,23 +120,25 @@ export default function FrenchPage() {
     let currentDate = new Date()
     currentDate.setHours(0, 0, 0, 0)
 
+    // Check if the most recent activity was today or yesterday to keep streak alive
     const mostRecentActivity = new Date(sortedActivities[0].date)
     mostRecentActivity.setHours(0, 0, 0, 0)
     
     const daysDifference = Math.floor((currentDate - mostRecentActivity) / (1000 * 60 * 60 * 24))
     
+    // Streak is broken if more than 1 day has passed since last activity
     if (daysDifference > 1) {
       setCurrentStreak(0)
       return
     }
 
-    let checkDate = new Date(currentDate)
-    if (daysDifference === 1) {
-      checkDate.setDate(checkDate.getDate() - 1)
-    }
+    // Start checking from the most recent activity date
+    // This ensures we count the first day correctly
+    let checkDate = new Date(mostRecentActivity)
 
     const activityDates = new Set(sortedActivities.map(a => a.date))
     
+    // Count consecutive days backward from the most recent activity
     while (true) {
       const dateStr = checkDate.toISOString().split('T')[0]
       if (activityDates.has(dateStr)) {
