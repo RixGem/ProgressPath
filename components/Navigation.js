@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { BookOpen, Languages, Home, LogOut, Settings } from 'lucide-react'
+import { BookOpen, Languages, Home, LogOut, Settings, Globe } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useState } from 'react'
 import ThemeToggle from './ThemeToggle'
@@ -35,6 +35,7 @@ export default function Navigation() {
     { href: '/', label: 'Home', icon: Home },
     { href: '/books', label: 'Books', icon: BookOpen },
     { href: '/french', label: 'French', icon: Languages },
+    { href: '/german', label: 'German', icon: Globe },
     { href: '/embed/settings', label: 'Embed', icon: Settings },
   ]
 
@@ -71,11 +72,10 @@ export default function Navigation() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 ${
-                      isActive
-                        ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-medium'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
-                    }`}
+                    className={`flex items-center space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 ${isActive
+                      ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-medium'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+                      }`}
                     title={item.label}
                   >
                     <Icon className="w-5 h-5" />
