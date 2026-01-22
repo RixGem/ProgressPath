@@ -27,8 +27,11 @@ export default function GermanPage() {
 
     useEffect(() => {
         if (user) {
+            console.log('[German Module] User authenticated:', user.id)
             fetchActivities()
             fetchTotalTime()
+        } else {
+            console.log('[German Module] No user authenticated')
         }
     }, [user])
 
@@ -57,23 +60,49 @@ export default function GermanPage() {
         return []
     }
 
+    /**
+     * Fetch user's German learning activities
+     * Table name: german_learning (with underscore)
+     */
     async function fetchActivities() {
+        if (!user?.id) {
+            console.error('[German Module] Cannot fetch activities: user.id is undefined')
+            setLoading(false)
+            return
+        }
+
         try {
+            console.log('[German Module] Fetching activities for user:', user.id)
+            console.log('[German Module] Using table: german_learning')
+            
             const { data, error } = await supabase
-                .from('german_learning')
+                .from('german_learning')  // ✅ Correct table name with underscore
                 .select('*')
-                .eq('user_id', user.id)
+                .eq('user_id', user.id)  // ✅ User-specific filtering
                 .order('date', { ascending: false })
                 .limit(30)
 
-            if (error) throw error
+            if (error) {
+                console.error('[German Module] Error fetching activities:', error)
+                console.error('[German Module] Error details:', {
+                    message: error.message,
+                    code: error.code,
+                    details: error.details,
+                    hint: error.hint
+                })
+                throw error
+            }
+            
+            console.log('[German Module] Successfully fetched activities:', data?.length || 0, 'records')
             setActivities(data || [])
 
             if (data && data.length > 0) {
                 calculateStreak(data)
+            } else {
+                console.log('[German Module] No activities found for this user')
             }
         } catch (error) {
-            console.error('Error fetching activities:', error)
+            console.error('[German Module] Error in fetchActivities:', error)
         } finally {
             setLoading(false)
         }
@@ -125,14 +154,28 @@ export default function GermanPage() {
         setCurrentStreak(streak)
     }
 
+    /**
+     * Fetch total time spent on German learning
+     * Table name: german_learning (with underscore)
+     */
     async function fetchTotalTime() {
-        try {
-            const { data, error } = await supabase
-                .from('german_learning')
-                .select('total_time, duration_minutes')
-                .eq('user_id', user.id)
+        if (!user?.id) {
+            console.error('[German Module] Cannot fetch total time: user.id is undefined')
+            return
+        }
 
-            if (error) throw error
+        try {
+            console.log('[German Module] Fetching total time for user:', user.id)
+            
+            const { data, error } = await supabase
+                .from('german_learning')  // ✅ Correct table name with underscore
+                .select('total_time, duration_minutes')
+                .eq('user_id', user.id)  // ✅ User-specific filtering
+
+            if (error) {
+                console.error('[German Module] Error fetching total time:', error)
+                throw error
+            }
 
             const total = data.reduce((sum, record) => {
                 const time = record.total_time !== undefined && record.total_time !== null
@@ -141,14 +184,26 @@ export default function GermanPage() {
                 return sum + (time || 0)
             }, 0)
 
+            console.log('[German Module] Total time calculated:', total, 'minutes')
             setTotalTime(total)
         } catch (error) {
-            console.error('Error fetching total time:', error)
+            console.error('[German Module] Error in fetchTotalTime:', error)
         }
     }
 
+    /**
+     * Submit new German learning activity
+     * Table name: german_learning (with underscore)
+     */
     async function handleSubmit(e) {
         e.preventDefault()
+        
+        if (!user?.id) {
+            console.error('[German Module] Cannot submit: user.id is undefined')
+            alert('Error: User not authenticated. Please refresh and try again.')
+            return
+        }
+
         try {
             const durationMinutes = parseInt(formData.duration_minutes)
 
@@ -171,20 +226,33 @@ export default function GermanPage() {
                 new_vocabulary: vocabularyArray.length > 0 ? vocabularyArray : null,
                 practice_sentences: sentencesArray.length > 0 ? sentencesArray : null,
                 mood: formData.mood,
-                user_id: user.id
+                user_id: user.id  // ✅ Explicitly set user_id
             }
 
+            console.log('[German Module] Inserting activity:', insertData)
+            console.log('[German Module] Using table: german_learning')
+
             const { error } = await supabase
-                .from('german_learning')
+                .from('german_learning')  // ✅ Correct table name with underscore
                 .insert([insertData])
 
-            if (error) throw error
+            if (error) {
+                console.error('[German Module] Error saving activity:', error)
+                console.error('[German Module] Error details:', {
+                    message: error.message,
+                    code: error.code,
+                    details: error.details,
+                    hint: error.hint
+                })
+                throw error
+            }
 
+            console.log('[German Module] Activity saved successfully')
             resetForm()
             fetchActivities()
             fetchTotalTime()
         } catch (error) {
-            console.error('Error saving activity:', error)
+            console.error('[German Module] Error in handleSubmit:', error)
             alert('Error saving activity: ' + error.message)
         }
     }
@@ -241,7 +309,14 @@ export default function GermanPage() {
     const stats = calculateStats()
 
     if (loading) {
-        return <div className="text-center py-12 text-gray-900 dark:text-gray-100">Loading...</div>
+        return (
+            <div className="text-center py-12 text-gray-900 dark:text-gray-100">
+                <div className="mb-4">Loading German learning data...</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Fetching from table: german_learning
+                </div>
+            </div>
+        )
     }
 
     return (
