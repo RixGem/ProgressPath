@@ -1,5 +1,6 @@
 /**
  * Database query functions for Duolingo activity data
+ * Uses duolingo_activity table which stores daily progress data per language
  */
 
 import { supabase } from '@/lib/supabase';
@@ -54,10 +55,10 @@ export async function getDailyXP(userId: string, period: TimePeriod = 'weekly', 
 
     let query = supabase
       .from('duolingo_activity')
-      .select('date, xp, language')
+      .select('date, xp_gained, language')
       .eq('user_id', userId)
-      .gte('date', startDate.toISOString())
-      .lte('date', endDate.toISOString())
+      .gte('date', startDate.toISOString().split('T')[0])
+      .lte('date', endDate.toISOString().split('T')[0])
       .order('date', { ascending: true });
 
     if (language) {
@@ -72,9 +73,9 @@ export async function getDailyXP(userId: string, period: TimePeriod = 'weekly', 
     const xpByDate = new Map<string, number>();
 
     data?.forEach(row => {
-      const dateStr = new Date(row.date).toISOString().split('T')[0];
+      const dateStr = row.date; // date is already in YYYY-MM-DD format
       const currentXP = xpByDate.get(dateStr) || 0;
-      xpByDate.set(dateStr, currentXP + (row.xp || 0));
+      xpByDate.set(dateStr, currentXP + (row.xp_gained || 0));
     });
 
     // Format for chart
@@ -97,9 +98,10 @@ export async function getDailyXP(userId: string, period: TimePeriod = 'weekly', 
  */
 export async function getStreakInfo(userId: string, language?: string): Promise<StreakData> {
   try {
+    // First try to get streak_count from the most recent record
     let query = supabase
       .from('duolingo_activity')
-      .select('date')
+      .select('date, streak_count')
       .eq('user_id', userId)
       .order('date', { ascending: false });
 
@@ -121,56 +123,17 @@ export async function getStreakInfo(userId: string, language?: string): Promise<
       };
     }
 
-    // Get unique dates
-    const uniqueDates = Array.from<string>(new Set((data || []).map(d => new Date(d.date).toISOString().split('T')[0]))).sort().reverse();
+    // Get the current streak from the most recent record
+    const currentStreak = data[0].streak_count || 0;
 
-    // Calculate current streak
-    let currentStreak = 0;
+    // Get unique dates for calculating longest streak
+    const uniqueDates = Array.from<string>(new Set((data || []).map(d => d.date))).sort().reverse();
+
     const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-
-    // Check if active (activity today)
     const isActive = uniqueDates.includes(today);
 
-    // Start counting from today or yesterday
-    let checkDate = isActive ? today : yesterday;
-
-    // If no activity today or yesterday, streak is 0
-    if (!uniqueDates.includes(today) && !uniqueDates.includes(yesterday)) {
-        currentStreak = 0;
-    } else {
-        for (const date of uniqueDates) {
-            if (date === checkDate) {
-                currentStreak++;
-                const prevDate = new Date(checkDate);
-                prevDate.setDate(prevDate.getDate() - 1);
-                checkDate = prevDate.toISOString().split('T')[0];
-            }
-        }
-    }
-
-    // Calculate longest streak
-    let longestStreak = 0;
-    let tempStreak = 0;
-    let prevDateTimestamp = 0;
-
-    const sortedDatesAsc = [...uniqueDates].reverse();
-
-    sortedDatesAsc.forEach(dateStr => {
-        const timestamp = new Date(dateStr).getTime();
-        if (prevDateTimestamp === 0) {
-            tempStreak = 1;
-        } else {
-            const diffDays = Math.round((timestamp - prevDateTimestamp) / (1000 * 60 * 60 * 24));
-            if (diffDays === 1) {
-                tempStreak++;
-            } else {
-                tempStreak = 1;
-            }
-        }
-        if (tempStreak > longestStreak) longestStreak = tempStreak;
-        prevDateTimestamp = timestamp;
-    });
+    // Calculate longest streak from streak_count values
+    const longestStreak = Math.max(...data.map(d => d.streak_count || 0), currentStreak);
 
     return {
       currentStreak,
@@ -211,15 +174,39 @@ export async function getActivityBreakdown(userId: string, language?: string): P
 
     if (error) throw error;
 
-    return (data || []).map((row, index) => ({
-      id: row.id || `activity-${index}`,
-      type: (row.event_type || 'practice') as Activity['type'],
-      title: row.event_type || 'Lesson',
-      description: row.language ? `${row.language} practice` : 'Language practice',
-      xpGained: row.xp || 0,
-      timestamp: new Date(row.date),
-      language: row.language?.toLowerCase() as Language
-    }));
+    // Parse raw_api_data to get individual activities
+    const activities: Activity[] = [];
+
+    (data || []).forEach((row, rowIndex) => {
+      const rawData = row.raw_api_data;
+
+      if (rawData?.activities && Array.isArray(rawData.activities)) {
+        rawData.activities.forEach((activity: any, actIndex: number) => {
+          activities.push({
+            id: `${row.id}-${actIndex}`,
+            type: 'lesson' as Activity['type'],
+            title: activity.skill || 'General Practice',
+            description: `${row.language} - ${activity.skill || 'Practice'}`,
+            xpGained: activity.xp || 0,
+            timestamp: new Date(`${row.date}T${activity.time || '12:00:00'}`),
+            language: row.language?.toLowerCase() as Language
+          });
+        });
+      } else {
+        // Fallback: create one activity per day if no detailed activities
+        activities.push({
+          id: row.id || `activity-${rowIndex}`,
+          type: 'practice' as Activity['type'],
+          title: `${row.language} Practice`,
+          description: `${row.lessons_completed || 0} lessons completed`,
+          xpGained: row.xp_gained || 0,
+          timestamp: new Date(row.date),
+          language: row.language?.toLowerCase() as Language
+        });
+      }
+    });
+
+    return activities.slice(0, 10);
   } catch (error) {
     console.error('Error fetching activity breakdown:', error);
     return [];
@@ -233,8 +220,9 @@ export async function getLanguageSummary(userId: string): Promise<LanguageStats[
   try {
     const { data, error } = await supabase
       .from('duolingo_activity')
-      .select('language, xp, date')
-      .eq('user_id', userId);
+      .select('language, xp_gained, total_xp, lessons_completed, time_spent_minutes, level, streak_count, date')
+      .eq('user_id', userId)
+      .order('date', { ascending: false });
 
     if (error) throw error;
 
@@ -242,31 +230,28 @@ export async function getLanguageSummary(userId: string): Promise<LanguageStats[
 
     data?.forEach(row => {
       const lang = (row.language || 'unknown').toLowerCase();
-      const current = statsMap.get(lang) || {
-        language: lang as Language,
-        displayName: row.language || 'Unknown',
-        totalXP: 0,
-        level: 1,
-        lessonsCompleted: 0,
-        timeSpent: 0,
-        streak: 0
-      };
+      const existing = statsMap.get(lang);
 
-      current.totalXP += (row.xp || 0);
-      current.lessonsCompleted += 1;
-      // Estimate time: 5 mins per lesson/activity
-      current.timeSpent += 5;
-
-      statsMap.set(lang, current);
+      if (!existing) {
+        // Use the most recent record's level and streak_count
+        statsMap.set(lang, {
+          language: lang as Language,
+          displayName: row.language || 'Unknown',
+          totalXP: row.xp_gained || 0,
+          level: row.level || 1,
+          lessonsCompleted: row.lessons_completed || 0,
+          timeSpent: row.time_spent_minutes || 0,
+          streak: row.streak_count || 0
+        });
+      } else {
+        // Aggregate XP, lessons, and time from older records
+        existing.totalXP += (row.xp_gained || 0);
+        existing.lessonsCompleted += (row.lessons_completed || 0);
+        existing.timeSpent += (row.time_spent_minutes || 0);
+      }
     });
 
-    // Calculate levels
-    const stats = Array.from(statsMap.values()).map(stat => ({
-      ...stat,
-      level: Math.floor(Math.sqrt(stat.totalXP / 100)) + 1
-    }));
-
-    return stats;
+    return Array.from(statsMap.values());
   } catch (error) {
     console.error('Error fetching language summary:', error);
     return [];
