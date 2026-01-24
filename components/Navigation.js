@@ -13,7 +13,11 @@ export default function Navigation() {
   const { user, signOut } = useAuth()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [openDropdown, setOpenDropdown] = useState(null)
-  const dropdownRef = useRef(null)
+  
+  // Create separate refs for each dropdown to fix click-outside detection
+  const dashboardDropdownRef = useRef(null)
+  const frenchDropdownRef = useRef(null)
+  const germanDropdownRef = useRef(null)
 
   // Don't show navigation on login page
   if (pathname === '/login') {
@@ -23,13 +27,30 @@ export default function Navigation() {
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      // Check each dropdown ref separately
+      const clickedOutsideDashboard = dashboardDropdownRef.current && 
+        !dashboardDropdownRef.current.contains(event.target)
+      const clickedOutsideFrench = frenchDropdownRef.current && 
+        !frenchDropdownRef.current.contains(event.target)
+      const clickedOutsideGerman = germanDropdownRef.current && 
+        !germanDropdownRef.current.contains(event.target)
+
+      // Only close if we clicked outside the currently open dropdown
+      if (openDropdown === 'dashboard' && clickedOutsideDashboard) {
+        setOpenDropdown(null)
+      } else if (openDropdown === 'language-0' && clickedOutsideFrench) {
+        setOpenDropdown(null)
+      } else if (openDropdown === 'language-1' && clickedOutsideGerman) {
         setOpenDropdown(null)
       }
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    
+    // Only add listener if a dropdown is open
+    if (openDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [openDropdown])
 
   const handleLogout = async () => {
     try {
@@ -93,12 +114,27 @@ export default function Navigation() {
     }
   ]
 
+  // Map menu keys to their respective refs
+  const getDropdownRef = (menuKey) => {
+    switch (menuKey) {
+      case 'dashboard':
+        return dashboardDropdownRef
+      case 'language-0':
+        return frenchDropdownRef
+      case 'language-1':
+        return germanDropdownRef
+      default:
+        return null
+    }
+  }
+
   const renderDropdownMenu = (menu, menuKey) => {
     const isOpen = openDropdown === menuKey
     const isActive = isPathGroupActive(menu.paths)
+    const dropdownRef = getDropdownRef(menuKey)
 
     return (
-      <div key={menuKey} className="relative" ref={menuKey === openDropdown ? dropdownRef : null}>
+      <div key={menuKey} className="relative" ref={dropdownRef}>
         <button
           onClick={() => toggleDropdown(menuKey)}
           className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 whitespace-nowrap ${
