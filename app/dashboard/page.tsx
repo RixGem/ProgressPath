@@ -3,8 +3,6 @@
  * Overview of all learning progress
  */
 
-'use client';
-
 import React, { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import XPStatsCard from '@/components/XPStatsCard';
@@ -13,17 +11,16 @@ import TimeChart from '@/components/TimeChart';
 import ViewModeToggle from '@/components/ViewModeToggle';
 import { useViewMode } from '@/hooks/useViewMode';
 import styles from './dashboard.module.css';
-import { getDailyXP, getStreakInfo, getActivityBreakdown, getLanguageSummary, TARGET_USER_ID } from '@/lib/db/queries';
+import { getDailyXP, getStreakInfo, getActivityBreakdown, getLanguageSummary } from '@/lib/db/queries';
 import { getXPStats } from '@/utils/xpCalculations';
 import type { DashboardData, LanguageStats, StreakData, Activity, TimeStats } from '@/types/dashboard';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function DashboardPage() {
   const { viewMode, setViewMode } = useViewMode('grid');
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // User ID provided in requirements
-  const userId = TARGET_USER_ID;
 
   const [data, setData] = useState<{
     xpStats: any;
@@ -35,11 +32,15 @@ export default function DashboardPage() {
   } | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!user) return;
+
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch all data in parallel using the updated query functions with userId
+      const userId = user.id;
+
+      // Fetch all data in parallel using the dynamic userId
       const [dailyXP, streakInfo, activities, languages] = await Promise.all([
         getDailyXP(userId, 'weekly'),
         getStreakInfo(userId),
@@ -76,13 +77,15 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [user]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (user) {
+      fetchData();
+    }
+  }, [fetchData, user]);
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <DashboardLayout>
         <div className={styles.loadingContainer}>
@@ -214,9 +217,9 @@ export default function DashboardPage() {
         <div className={styles.section}>
           <h2 className={styles.sectionTitle}>📈 Progress Charts</h2>
           <div className={styles.chartsGrid}>
-            {data && (
+            {data && user && (
               <XPChart
-                userId={userId}
+                userId={user.id}
                 goalXP={50}
                 initialConfig={{ period: 'weekly', type: 'area' }}
               />
