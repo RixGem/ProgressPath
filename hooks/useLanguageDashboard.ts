@@ -93,20 +93,20 @@ export function useLanguageDashboard(language: string): UseLanguageDashboardResu
         virtualLevel: virtualLevelData.data?.virtualLevel || 0,
         completionRate: completionData.data?.completionRate || 0,
         activeSkillsCount: skillsData.data?.activeSkillsCount || 0,
-        streakCount: xpData.summary?.streakCount || 0,
+        streakCount: xpData.data?.streakData?.currentStreak || 0,
         totalXp: virtualLevelData.data?.totalXp || 0,
         estimatedHours: virtualLevelData.data?.estimatedHours || 0,
         timeSpentMinutes: heatmapData.data?.summary?.totalMinutes || 0,
         recentActivityHeat: heatmapData.data?.heatmap || [],
-        xpData: xpData.data || [],
-        wordsLearned: xpData.summary?.wordsLearned || 0,
-        vocabularyTrends: xpData.data?.map((item: any) => ({
+        xpData: xpData.data?.chartData || [],
+        wordsLearned: xpData.data?.vocabularyStats?.wordsLearned || 0,
+        vocabularyTrends: xpData.data?.chartData?.map((item: any) => ({
           date: item.date,
           wordsLearned: item.wordsLearned || 0
         })) || [],
-        recentActivities: (xpData.data || []).slice(0, 10).map((item: any) => ({
-          id: item.id || `${item.date}-${item.xpGained}`,
-          date: item.date,
+        recentActivities: (xpData.data?.activities || []).slice(0, 10).map((item: any) => ({
+          id: item.id || `${item.timestamp}-${item.xpGained}`,
+          date: item.timestamp,
           xpGained: item.xpGained,
           lessonsCompleted: item.lessonsCompleted || 0,
           timeSpentMinutes: item.timeSpentMinutes || 0
