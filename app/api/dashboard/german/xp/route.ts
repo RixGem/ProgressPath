@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import type { TimePeriod } from '@/types/xpChart';
-import { getDailyXP, getStreakInfo, getActivityBreakdown, TARGET_USER_ID } from '@/lib/db/queries';
+import { getDailyXP, getStreakInfo, getActivityBreakdown, getTimeStats, getVocabularyStats, TARGET_USER_ID } from '@/lib/db/queries';
 import { getXPStats } from '@/utils/xpCalculations';
 
 /**
@@ -28,23 +28,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch German-specific dashboard data
-    const [chartData, streakData, activities] = await Promise.all([
+    const [chartData, streakData, activities, timeStats, vocabStats] = await Promise.all([
       getDailyXP(userId, period, 'German'),
       getStreakInfo(userId, 'German'),
-      getActivityBreakdown(userId, 'German')
+      getActivityBreakdown(userId, 'German'),
+      getTimeStats(userId, 'German'),
+      getVocabularyStats(userId, 'German')
     ]);
 
     // Calculate total XP for German
     const totalXP = chartData.reduce((sum, point) => sum + point.xp, 0);
     const xpStats = getXPStats(totalXP);
-
-    const timeStats = {
-      totalMinutes: Math.round(totalXP / 10),
-      todayMinutes: 0,
-      weekMinutes: 0,
-      monthMinutes: 0,
-      averageDaily: 0
-    };
 
     return NextResponse.json({
       success: true,
@@ -53,7 +47,8 @@ export async function GET(request: NextRequest) {
         chartData,
         activities,
         timeStats,
-        streakData
+        streakData,
+        vocabularyStats: vocabStats
       },
       metadata: {
         userId,

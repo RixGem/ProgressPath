@@ -260,3 +260,133 @@ export async function getLanguageSummary(userId: string): Promise<LanguageStats[
     return [];
   }
 }
+
+/**
+ * Get time stats with proper date filtering
+ */
+export async function getTimeStats(userId: string, language?: string): Promise<TimeStats> {
+  try {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    // Calculate date boundaries
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - 7);
+    const weekStartStr = weekStart.toISOString().split('T')[0];
+
+    const monthStart = new Date(today);
+    monthStart.setDate(today.getDate() - 30);
+    const monthStartStr = monthStart.toISOString().split('T')[0];
+
+    let query = supabase
+      .from('duolingo_activity')
+      .select('date, time_spent_minutes')
+      .eq('user_id', userId)
+      .gte('date', monthStartStr)
+      .lte('date', todayStr);
+
+    if (language) {
+      query = query.ilike('language', language);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    // Calculate time stats
+    let todayMinutes = 0;
+    let weekMinutes = 0;
+    let monthMinutes = 0;
+    let totalMinutes = 0;
+    let daysWithActivity = 0;
+
+    data?.forEach(row => {
+      const minutes = row.time_spent_minutes || 0;
+      const rowDate = row.date;
+
+      totalMinutes += minutes;
+      monthMinutes += minutes;
+
+      if (rowDate === todayStr) {
+        todayMinutes += minutes;
+      }
+
+      if (rowDate >= weekStartStr) {
+        weekMinutes += minutes;
+      }
+
+      if (minutes > 0) {
+        daysWithActivity++;
+      }
+    });
+
+    const averageDaily = daysWithActivity > 0 ? Math.round(totalMinutes / daysWithActivity) : 0;
+
+    return {
+      totalMinutes,
+      todayMinutes,
+      weekMinutes,
+      monthMinutes,
+      averageDaily
+    };
+  } catch (error) {
+    console.error('Error fetching time stats:', error);
+    return {
+      totalMinutes: 0,
+      todayMinutes: 0,
+      weekMinutes: 0,
+      monthMinutes: 0,
+      averageDaily: 0
+    };
+  }
+}
+
+/**
+ * Get vocabulary stats from database
+ */
+export interface VocabularyStats {
+  wordsLearned: number;
+  accuracy: number;  // Will need to be calculated from raw_api_data if available
+  masteredTopics: number;  // Will need to be calculated from raw_api_data if available
+}
+
+export async function getVocabularyStats(userId: string, language?: string): Promise<VocabularyStats> {
+  try {
+    let query = supabase
+      .from('duolingo_activity')
+      .select('words_learned, raw_api_data')
+      .eq('user_id', userId);
+
+    if (language) {
+      query = query.ilike('language', language);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    // Sum up words_learned from all records
+    let totalWordsLearned = 0;
+
+    data?.forEach(row => {
+      totalWordsLearned += row.words_learned || 0;
+    });
+
+    // For accuracy and mastered topics, we'd need additional data
+    // Currently returning placeholders - these would need to be tracked separately
+    // or calculated from raw_api_data if available
+    return {
+      wordsLearned: totalWordsLearned,
+      accuracy: 0,  // Not tracked in current schema
+      masteredTopics: 0  // Not tracked in current schema
+    };
+  } catch (error) {
+    console.error('Error fetching vocabulary stats:', error);
+    return {
+      wordsLearned: 0,
+      accuracy: 0,
+      masteredTopics: 0
+    };
+  }
+}
+
