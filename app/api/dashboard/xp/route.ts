@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import type { TimePeriod } from '@/types/xpChart';
+import type { ChartDataPoint, TimePeriod } from '@/types/xpChart';
 import { getDailyXP } from '@/lib/db/queries';
 
 /**
