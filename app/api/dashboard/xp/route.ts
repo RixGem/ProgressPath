@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch real data from database
     const processedData = {
-      data: await getDailyXP(period),
+      data: await getDailyXP(userId || 'default-user', period),
       summary: {} // Add summary if needed
     };
 

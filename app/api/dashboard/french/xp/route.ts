@@ -29,9 +29,9 @@ export async function GET(request: NextRequest) {
     // Fetch French-specific dashboard data
     // Parallel fetch
     const [chartData, streakData, activities] = await Promise.all([
-      getDailyXP(period, 'French'),
-      getStreakInfo('French'),
-      getActivityBreakdown('French')
+      getDailyXP(userId, period, 'French'),
+      getStreakInfo(userId, 'French'),
+      getActivityBreakdown(userId, 'French')
     ]);
 
     // Calculate total XP for French

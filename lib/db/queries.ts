@@ -6,12 +6,31 @@ import { supabase } from '@/lib/supabase';
 import type { ChartDataPoint, TimePeriod } from '@/types/xpChart';
 import type { DashboardData, Activity, TimeStats, StreakData, Language, LanguageStats } from '@/types/dashboard';
 
-const TARGET_USER_ID = 'f484bfe8-2771-4e0f-b765-830fbdb3c74e';
+// Fixed user ID as per requirements
+export const TARGET_USER_ID = 'f484bfe8-2771-4e0f-b765-830fbdb3c74e';
+
+/**
+ * Fetch raw Duolingo stats for a user
+ */
+export async function getDuolingoStats(userId: string) {
+  const { data, error } = await supabase
+    .from('duolingo_activity')
+    .select('*')
+    .eq('user_id', userId)
+    .order('date', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching Duolingo stats:', error);
+    return null;
+  }
+
+  return data;
+}
 
 /**
  * Get daily XP for charts
  */
-export async function getDailyXP(period: TimePeriod = 'weekly', language?: string): Promise<ChartDataPoint[]> {
+export async function getDailyXP(userId: string, period: TimePeriod = 'weekly', language?: string): Promise<ChartDataPoint[]> {
   try {
     const endDate = new Date();
     let startDate = new Date();
@@ -34,20 +53,14 @@ export async function getDailyXP(period: TimePeriod = 'weekly', language?: strin
     }
 
     let query = supabase
-      .from('duolingoactivity')
+      .from('duolingo_activity')
       .select('date, xp, language')
-      .eq('user_id', TARGET_USER_ID)
+      .eq('user_id', userId)
       .gte('date', startDate.toISOString())
       .lte('date', endDate.toISOString())
       .order('date', { ascending: true });
 
     if (language) {
-      // Case insensitive match if possible, or just exact match.
-      // Duolingo data usually has capitalized "French", "German".
-      // Let's assume the passed language matches the DB or do a case-insensitive check if Supabase supports it easily,
-      // or just filter in JS. Filtering in JS might be safer if we are unsure of casing.
-      // But query is better for performance.
-      // Let's try exact match first, assuming input is correct (e.g. "French")
       query = query.ilike('language', language);
     }
 
@@ -82,12 +95,12 @@ export async function getDailyXP(period: TimePeriod = 'weekly', language?: strin
 /**
  * Get streak information
  */
-export async function getStreakInfo(language?: string): Promise<StreakData> {
+export async function getStreakInfo(userId: string, language?: string): Promise<StreakData> {
   try {
     let query = supabase
-      .from('duolingoactivity')
+      .from('duolingo_activity')
       .select('date')
-      .eq('user_id', TARGET_USER_ID)
+      .eq('user_id', userId)
       .order('date', { ascending: false });
 
     if (language) {
@@ -181,12 +194,12 @@ export async function getStreakInfo(language?: string): Promise<StreakData> {
 /**
  * Get activity breakdown
  */
-export async function getActivityBreakdown(language?: string): Promise<Activity[]> {
+export async function getActivityBreakdown(userId: string, language?: string): Promise<Activity[]> {
   try {
     let query = supabase
-      .from('duolingoactivity')
+      .from('duolingo_activity')
       .select('*')
-      .eq('user_id', TARGET_USER_ID)
+      .eq('user_id', userId)
       .order('date', { ascending: false })
       .limit(10);
 
@@ -216,12 +229,12 @@ export async function getActivityBreakdown(language?: string): Promise<Activity[
 /**
  * Get language summary
  */
-export async function getLanguageSummary(): Promise<LanguageStats[]> {
+export async function getLanguageSummary(userId: string): Promise<LanguageStats[]> {
   try {
     const { data, error } = await supabase
-      .from('duolingoactivity')
+      .from('duolingo_activity')
       .select('language, xp, date')
-      .eq('user_id', TARGET_USER_ID);
+      .eq('user_id', userId);
 
     if (error) throw error;
 
@@ -259,4 +272,3 @@ export async function getLanguageSummary(): Promise<LanguageStats[]> {
     return [];
   }
 }
-

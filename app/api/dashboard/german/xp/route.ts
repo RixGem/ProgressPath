@@ -28,9 +28,9 @@ export async function GET(request: NextRequest) {
 
     // Fetch German-specific dashboard data
     const [chartData, streakData, activities] = await Promise.all([
-      getDailyXP(period, 'German'),
-      getStreakInfo('German'),
-      getActivityBreakdown('German')
+      getDailyXP(userId, period, 'German'),
+      getStreakInfo(userId, 'German'),
+      getActivityBreakdown(userId, 'German')
     ]);
 
     // Calculate total XP for German

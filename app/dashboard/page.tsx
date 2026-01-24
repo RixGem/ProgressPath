@@ -13,7 +13,7 @@ import TimeChart from '@/components/TimeChart';
 import ViewModeToggle from '@/components/ViewModeToggle';
 import { useViewMode } from '@/hooks/useViewMode';
 import styles from './dashboard.module.css';
-import { getDailyXP, getStreakInfo, getActivityBreakdown, getLanguageSummary } from '@/lib/db/queries';
+import { getDailyXP, getStreakInfo, getActivityBreakdown, getLanguageSummary, TARGET_USER_ID } from '@/lib/db/queries';
 import { getXPStats } from '@/utils/xpCalculations';
 import type { DashboardData, LanguageStats, StreakData, Activity, TimeStats } from '@/types/dashboard';
 
@@ -21,6 +21,9 @@ export default function DashboardPage() {
   const { viewMode, setViewMode } = useViewMode('grid');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // User ID provided in requirements
+  const userId = TARGET_USER_ID;
 
   const [data, setData] = useState<{
     xpStats: any;
@@ -36,12 +39,12 @@ export default function DashboardPage() {
       setLoading(true);
       setError(null);
 
-      // Fetch all data in parallel
+      // Fetch all data in parallel using the updated query functions with userId
       const [dailyXP, streakInfo, activities, languages] = await Promise.all([
-        getDailyXP('weekly'),
-        getStreakInfo(),
-        getActivityBreakdown(),
-        getLanguageSummary()
+        getDailyXP(userId, 'weekly'),
+        getStreakInfo(userId),
+        getActivityBreakdown(userId),
+        getLanguageSummary(userId)
       ]);
 
       // Calculate aggregated stats
@@ -73,7 +76,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     fetchData();
@@ -216,17 +219,6 @@ export default function DashboardPage() {
                 userId="default"
                 goalXP={50}
                 initialConfig={{ period: 'weekly', type: 'area' }}
-                // Pass pre-fetched data if the component supports it, otherwise it might fetch its own
-                // Looking at props, XPChart might be self-fetching or accept data.
-                // Assuming we might need to update XPChart to accept 'data' prop or rely on internal fetching which we haven't updated yet.
-                // However, the prompt asked to update page.tsx to use new queries.
-                // If XPChart internally fetches, we might need to pass data to it if possible,
-                // or ensure the API it calls is updated.
-                // Since we updated lib/db/queries.ts, if XPChart uses that, it's fine.
-                // But XPChart likely fetches from API.
-                // Let's assume for this task we just render it.
-                // To be fully correct, we should pass the data if supported.
-                // Checking XPChart usage in original code: it didn't pass data.
               />
             )}
             {/* TimeChart might be less useful with estimated data, but keeping for layout consistency */}
@@ -262,4 +254,5 @@ export default function DashboardPage() {
     </DashboardLayout>
   );
 }
+
 
