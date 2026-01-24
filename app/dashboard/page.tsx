@@ -20,7 +20,8 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function DashboardPage() {
   const { viewMode, setViewMode } = useViewMode('grid');
-  const { user } = useAuth();
+  // Explicitly typecast user to any since AuthContext is JS
+  const { user } = useAuth() as any;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
