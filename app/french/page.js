@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { Languages, Plus, Calendar, TrendingUp, X, BookOpen, MessageSquare, Smile, Flame } from 'lucide-react'
+import { Languages, Plus, Calendar, TrendingUp, X, BookOpen, MessageSquare, Smile, Flame, GalleryHorizontal, FileText as FileTextIcon } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
+import FlashcardNotes from '../../components/FlashcardNotes'
 import { useAuth } from '../../contexts/AuthContext'
 
 export default function FrenchPage() {
@@ -13,6 +14,7 @@ export default function FrenchPage() {
   const [showForm, setShowForm] = useState(false)
   const [totalTime, setTotalTime] = useState(0)
   const [currentStreak, setCurrentStreak] = useState(0)
+  const [showFlashcards, setShowFlashcards] = useState(false)
   const [formData, setFormData] = useState({
     activity_type: 'vocabulary',
     duration_minutes: '',
@@ -36,12 +38,12 @@ export default function FrenchPage() {
    */
   function normalizeVocabulary(vocabulary) {
     if (!vocabulary) return []
-    
+
     // If already an array, return it
     if (Array.isArray(vocabulary)) {
       return vocabulary
     }
-    
+
     // If it's a string, try to parse it
     if (typeof vocabulary === 'string') {
       // Check if it's in Chinese summary format (e.g., "8个新词汇，15个复习词汇")
@@ -50,14 +52,14 @@ export default function FrenchPage() {
         // Return empty array as we don't have the actual words
         return []
       }
-      
+
       // Otherwise, split by comma and clean up
       return vocabulary
         .split(',')
         .map(v => v.trim())
         .filter(v => v.length > 0)
     }
-    
+
     return []
   }
 
@@ -67,12 +69,12 @@ export default function FrenchPage() {
    */
   function normalizeSentences(sentences) {
     if (!sentences) return []
-    
+
     // If already an array, return it
     if (Array.isArray(sentences)) {
       return sentences
     }
-    
+
     // If it's a string, split by comma
     if (typeof sentences === 'string') {
       return sentences
@@ -80,7 +82,7 @@ export default function FrenchPage() {
         .map(s => s.trim())
         .filter(s => s.length > 0)
     }
-    
+
     return []
   }
 
@@ -92,10 +94,10 @@ export default function FrenchPage() {
         .eq('user_id', user.id)
         .order('date', { ascending: false })
         .limit(30)
-      
+
       if (error) throw error
       setActivities(data || [])
-      
+
       if (data && data.length > 0) {
         calculateStreak(data)
       }
@@ -112,7 +114,7 @@ export default function FrenchPage() {
       return
     }
 
-    const sortedActivities = [...activitiesData].sort((a, b) => 
+    const sortedActivities = [...activitiesData].sort((a, b) =>
       new Date(b.date) - new Date(a.date)
     )
 
@@ -122,9 +124,9 @@ export default function FrenchPage() {
 
     const mostRecentActivity = new Date(sortedActivities[0].date)
     mostRecentActivity.setHours(0, 0, 0, 0)
-    
+
     const daysDifference = Math.floor((currentDate - mostRecentActivity) / (1000 * 60 * 60 * 24))
-    
+
     if (daysDifference > 1) {
       setCurrentStreak(0)
       return
@@ -136,7 +138,7 @@ export default function FrenchPage() {
     }
 
     const activityDates = new Set(sortedActivities.map(a => a.date))
-    
+
     while (true) {
       const dateStr = checkDate.toISOString().split('T')[0]
       if (activityDates.has(dateStr)) {
@@ -156,16 +158,16 @@ export default function FrenchPage() {
         .from('french_learning')
         .select('total_time, duration_minutes')
         .eq('user_id', user.id)
-      
+
       if (error) throw error
-      
+
       const total = data.reduce((sum, record) => {
-        const time = record.total_time !== undefined && record.total_time !== null 
-          ? record.total_time 
+        const time = record.total_time !== undefined && record.total_time !== null
+          ? record.total_time
           : record.duration_minutes
         return sum + (time || 0)
       }, 0)
-      
+
       setTotalTime(total)
     } catch (error) {
       console.error('Error fetching total time:', error)
@@ -176,17 +178,17 @@ export default function FrenchPage() {
     e.preventDefault()
     try {
       const durationMinutes = parseInt(formData.duration_minutes)
-      
+
       const vocabularyArray = formData.new_vocabulary
         .split(',')
         .map(v => v.trim())
         .filter(v => v.length > 0)
-      
+
       const sentencesArray = formData.practice_sentences
         .split(',')
         .map(s => s.trim())
         .filter(s => s.length > 0)
-      
+
       const insertData = {
         activity_type: formData.activity_type,
         duration_minutes: durationMinutes,
@@ -198,13 +200,13 @@ export default function FrenchPage() {
         mood: formData.mood,
         user_id: user.id
       }
-      
+
       const { error } = await supabase
         .from('french_learning')
         .insert([insertData])
-        
+
       if (error) throw error
-      
+
       resetForm()
       fetchActivities()
       fetchTotalTime()
@@ -229,24 +231,24 @@ export default function FrenchPage() {
 
   function calculateStats() {
     const totalHours = (totalTime / 60).toFixed(1)
-    
+
     const thisWeek = activities.filter(a => {
       const activityDate = new Date(a.date)
       const weekAgo = new Date()
       weekAgo.setDate(weekAgo.getDate() - 7)
       return activityDate >= weekAgo
     }).length
-    
+
     const totalVocabulary = activities.reduce((sum, a) => {
       const vocab = normalizeVocabulary(a.new_vocabulary)
       return sum + vocab.length
     }, 0)
-    
+
     return { totalHours, totalSessions: activities.length, thisWeek, totalVocabulary, currentStreak }
   }
 
   function getMoodEmoji(mood) {
-    switch(mood) {
+    switch (mood) {
       case 'good': return '😊'
       case 'neutral': return '😐'
       case 'difficult': return '😓'
@@ -255,7 +257,7 @@ export default function FrenchPage() {
   }
 
   function getMoodColor(mood) {
-    switch(mood) {
+    switch (mood) {
       case 'good': return 'text-green-600 dark:text-green-400'
       case 'neutral': return 'text-yellow-600 dark:text-yellow-400'
       case 'difficult': return 'text-red-600 dark:text-red-400'
@@ -298,7 +300,7 @@ export default function FrenchPage() {
               <TrendingUp className="w-8 h-8 text-purple-400 dark:text-purple-300" />
             </div>
           </div>
-          
+
           <div className="card p-6 dark:border dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div>
@@ -308,7 +310,7 @@ export default function FrenchPage() {
               <Flame className="w-8 h-8 text-orange-400 dark:text-orange-300" />
             </div>
           </div>
-          
+
           <div className="card p-6 dark:border dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div>
@@ -318,7 +320,7 @@ export default function FrenchPage() {
               <Calendar className="w-8 h-8 text-primary-400 dark:text-primary-300" />
             </div>
           </div>
-          
+
           <div className="card p-6 dark:border dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div>
@@ -353,7 +355,7 @@ export default function FrenchPage() {
                     <option value="exercise">Exercise</option>
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="label">Duration (minutes) *</label>
                   <input
@@ -365,7 +367,7 @@ export default function FrenchPage() {
                     onChange={(e) => setFormData({ ...formData, duration_minutes: e.target.value })}
                   />
                 </div>
-                
+
                 <div>
                   <label className="label">Date *</label>
                   <input
@@ -376,7 +378,7 @@ export default function FrenchPage() {
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                   />
                 </div>
-                
+
                 <div>
                   <label className="label">How did it go? *</label>
                   <select
@@ -391,7 +393,7 @@ export default function FrenchPage() {
                   </select>
                 </div>
               </div>
-              
+
               <div>
                 <label className="label">New Vocabulary</label>
                 <input
@@ -403,7 +405,7 @@ export default function FrenchPage() {
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Separate multiple words with commas</p>
               </div>
-              
+
               <div>
                 <label className="label">Practice Sentences</label>
                 <textarea
@@ -415,7 +417,7 @@ export default function FrenchPage() {
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Separate multiple sentences with commas</p>
               </div>
-              
+
               <div>
                 <label className="label">Notes</label>
                 <textarea
@@ -426,7 +428,7 @@ export default function FrenchPage() {
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 />
               </div>
-              
+
               <div className="flex space-x-3">
                 <button type="submit" className="btn-primary">Log Activity</button>
                 <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
@@ -456,11 +458,11 @@ export default function FrenchPage() {
                 const displayDuration = activity.total_time !== undefined && activity.total_time !== null
                   ? activity.total_time
                   : activity.duration_minutes
-                
+
                 // Normalize vocabulary and sentences to handle both string and array formats
                 const normalizedVocabulary = normalizeVocabulary(activity.new_vocabulary)
                 const normalizedSentences = normalizeSentences(activity.practice_sentences)
-                
+
                 return (
                   <div key={activity.id} className="border-l-4 border-purple-500 dark:border-purple-400 pl-4 py-3 bg-gray-50 dark:bg-gray-700/50 rounded-r-lg">
                     <div className="flex justify-between items-start">
@@ -473,10 +475,10 @@ export default function FrenchPage() {
                             {displayDuration} min
                           </span>
                           <span className="text-sm text-gray-400 dark:text-gray-500">
-                            {new Date(activity.date).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric', 
-                              year: 'numeric' 
+                            {new Date(activity.date).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
                             })}
                           </span>
                           {activity.mood && (
@@ -485,7 +487,7 @@ export default function FrenchPage() {
                             </span>
                           )}
                         </div>
-                        
+
                         {/* Display vocabulary if available */}
                         {normalizedVocabulary.length > 0 && (
                           <div className="mb-2">
@@ -502,25 +504,25 @@ export default function FrenchPage() {
                             </div>
                           </div>
                         )}
-                        
+
                         {/* Show a notice if vocabulary data is in old format */}
-                        {!normalizedVocabulary.length && activity.new_vocabulary && 
-                         typeof activity.new_vocabulary === 'string' && 
-                         (activity.new_vocabulary.includes('个新词汇') || activity.new_vocabulary.includes('个复习词汇')) && (
-                          <div className="mb-2">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <BookOpen className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                              <span className="text-sm font-medium text-amber-700 dark:text-amber-300">Vocabulary Summary:</span>
+                        {!normalizedVocabulary.length && activity.new_vocabulary &&
+                          typeof activity.new_vocabulary === 'string' &&
+                          (activity.new_vocabulary.includes('个新词汇') || activity.new_vocabulary.includes('个复习词汇')) && (
+                            <div className="mb-2">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <BookOpen className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                                <span className="text-sm font-medium text-amber-700 dark:text-amber-300">Vocabulary Summary:</span>
+                              </div>
+                              <div className="ml-6 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded">
+                                {activity.new_vocabulary}
+                                <span className="block text-xs mt-1 text-amber-500 dark:text-amber-400">
+                                  ℹ️ Legacy data format - specific words not recorded
+                                </span>
+                              </div>
                             </div>
-                            <div className="ml-6 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded">
-                              {activity.new_vocabulary}
-                              <span className="block text-xs mt-1 text-amber-500 dark:text-amber-400">
-                                ℹ️ Legacy data format - specific words not recorded
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                        
+                          )}
+
                         {/* Display practice sentences if available */}
                         {normalizedSentences.length > 0 && (
                           <div className="mb-2">
@@ -535,7 +537,7 @@ export default function FrenchPage() {
                             </ul>
                           </div>
                         )}
-                        
+
                         {activity.notes && (
                           <p className="text-gray-600 dark:text-gray-300 text-sm mt-2">{activity.notes}</p>
                         )}
@@ -566,13 +568,12 @@ export default function FrenchPage() {
                   const time = a.total_time !== undefined && a.total_time !== null ? a.total_time : a.duration_minutes
                   return sum + (time || 0)
                 }, 0)
-                
+
                 return (
                   <div key={i} className="text-center">
-                    <div 
-                      className={`h-20 rounded-lg flex items-center justify-center ${
-                        hasActivity ? 'bg-purple-500 dark:bg-purple-600 text-white font-semibold' : 'bg-gray-200 dark:bg-gray-700'
-                      }`}
+                    <div
+                      className={`h-20 rounded-lg flex items-center justify-center ${hasActivity ? 'bg-purple-500 dark:bg-purple-600 text-white font-semibold' : 'bg-gray-200 dark:bg-gray-700'
+                        }`}
                       title={hasActivity ? `${totalMinutes} minutes` : 'No activity'}
                     >
                       {hasActivity && <span className="text-sm">{totalMinutes}m</span>}
@@ -597,6 +598,131 @@ export default function FrenchPage() {
           </div>
         )}
       </div>
+
+      {showFlashcards && (
+        <FlashcardNotes
+          items={activities}
+          onClose={() => setShowFlashcards(false)}
+          title="French Learning History"
+          renderFront={(activity) => {
+            const normalizedVocabulary = normalizeVocabulary(activity.new_vocabulary)
+
+            return (
+              <div className="flex flex-col h-full items-center justify-center text-center space-y-6">
+                <div className="w-20 h-20 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+                  <span className="text-4xl text-purple-600 dark:text-purple-400 capitalize">
+                    {activity.activity_type ? activity.activity_type.charAt(0) : '?'}
+                  </span>
+                </div>
+
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white capitalize">
+                  {activity.activity_type}
+                </h3>
+
+                <div className="space-y-2">
+                  <div className="text-4xl font-bold text-purple-600 dark:text-purple-400">
+                    {activity.total_time || activity.duration_minutes} min
+                  </div>
+                  <div className="text-gray-500 dark:text-gray-400">Duration</div>
+                </div>
+
+                <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 px-4 py-2 rounded-lg">
+                  <Calendar className="w-4 h-4 text-gray-500" />
+                  <span className="font-medium">
+                    {new Date(activity.date).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </span>
+                </div>
+
+                <div className="flex gap-4">
+                  {normalizedVocabulary.length > 0 && (
+                    <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
+                      <BookOpen className="w-5 h-5" />
+                      <span className="font-bold">{normalizedVocabulary.length} Words</span>
+                    </div>
+                  )}
+
+                  {activity.mood && (
+                    <div className={`flex items-center space-x-1 ${getMoodColor(activity.mood)}`}>
+                      <span className="text-xl">{getMoodEmoji(activity.mood)}</span>
+                      <span className="font-bold capitalize">{activity.mood}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          }}
+          renderBack={(activity) => {
+            const normalizedVocabulary = normalizeVocabulary(activity.new_vocabulary)
+            const normalizedSentences = normalizeSentences(activity.practice_sentences)
+
+            return (
+              <div className="space-y-6 h-full text-left">
+                {/* Vocabulary Section */}
+                {normalizedVocabulary.length > 0 && (
+                  <div>
+                    <h4 className="flex items-center space-x-2 text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                      <BookOpen className="w-5 h-5 text-green-500" />
+                      <span>Vocabulary</span>
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {normalizedVocabulary.map((word, idx) => (
+                        <span key={idx} className="px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-lg text-sm border border-green-200 dark:border-green-800">
+                          {word}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sentences Section */}
+                {normalizedSentences.length > 0 && (
+                  <div>
+                    <h4 className="flex items-center space-x-2 text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                      <MessageSquare className="w-5 h-5 text-blue-500" />
+                      <span>Practice Sentences</span>
+                    </h4>
+                    <ul className="space-y-2">
+                      {normalizedSentences.map((sentence, idx) => (
+                        <li key={idx} className="flex items-start space-x-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+                          <span className="text-blue-500 mt-1">•</span>
+                          <span className="text-gray-700 dark:text-gray-300 italic">{sentence}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Notes Section */}
+                {activity.notes && (
+                  <div>
+                    <h4 className="flex items-center space-x-2 text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                      <FileTextIcon className="w-5 h-5 text-gray-500" />
+                      <span>Notes</span>
+                    </h4>
+                    <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                        {activity.notes}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty State */}
+                {!normalizedVocabulary.length && !normalizedSentences.length && !activity.notes && (
+                  <div className="h-full flex items-center justify-center text-gray-400 dark:text-gray-500 italic">
+                    No details recorded for this session.
+                  </div>
+                )}
+              </div>
+            )
+          }}
+        />
+      )}
     </ProtectedRoute>
   )
 }
