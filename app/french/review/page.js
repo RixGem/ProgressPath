@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '../../lib/supabase'
-import ProtectedRoute from '../../components/ProtectedRoute'
-import FlashcardNotes from '../../components/FlashcardNotes'
-import { useAuth } from '../../contexts/AuthContext'
+import { supabase } from '../../../lib/supabase'
+import ProtectedRoute from '../../../components/ProtectedRoute'
+import FlashcardNotes from '../../../components/FlashcardNotes'
+import { useAuth } from '../../../contexts/AuthContext'
 import { BookOpen, Calendar, MessageSquare, FileText as FileTextIcon, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
