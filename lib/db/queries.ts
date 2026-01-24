@@ -11,7 +11,7 @@ const TARGET_USER_ID = 'f484bfe8-2771-4e0f-b765-830fbdb3c74e';
 /**
  * Get daily XP for charts
  */
-export async function getDailyXP(period: TimePeriod = 'weekly'): Promise<ChartDataPoint[]> {
+export async function getDailyXP(period: TimePeriod = 'weekly', language?: string): Promise<ChartDataPoint[]> {
   try {
     const endDate = new Date();
     let startDate = new Date();
@@ -33,13 +33,25 @@ export async function getDailyXP(period: TimePeriod = 'weekly'): Promise<ChartDa
         startDate.setDate(endDate.getDate() - 30);
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('duolingoactivity')
       .select('date, xp, language')
       .eq('user_id', TARGET_USER_ID)
       .gte('date', startDate.toISOString())
       .lte('date', endDate.toISOString())
       .order('date', { ascending: true });
+
+    if (language) {
+      // Case insensitive match if possible, or just exact match.
+      // Duolingo data usually has capitalized "French", "German".
+      // Let's assume the passed language matches the DB or do a case-insensitive check if Supabase supports it easily,
+      // or just filter in JS. Filtering in JS might be safer if we are unsure of casing.
+      // But query is better for performance.
+      // Let's try exact match first, assuming input is correct (e.g. "French")
+      query = query.ilike('language', language);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -70,13 +82,19 @@ export async function getDailyXP(period: TimePeriod = 'weekly'): Promise<ChartDa
 /**
  * Get streak information
  */
-export async function getStreakInfo(): Promise<StreakData> {
+export async function getStreakInfo(language?: string): Promise<StreakData> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('duolingoactivity')
       .select('date')
       .eq('user_id', TARGET_USER_ID)
       .order('date', { ascending: false });
+
+    if (language) {
+      query = query.ilike('language', language);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -104,7 +122,7 @@ export async function getStreakInfo(): Promise<StreakData> {
     // Start counting from today or yesterday
     let checkDate = isActive ? today : yesterday;
 
-    // If no activity today or yesterday, streak is 0 (unless we want to show broken streak state)
+    // If no activity today or yesterday, streak is 0
     if (!uniqueDates.includes(today) && !uniqueDates.includes(yesterday)) {
         currentStreak = 0;
     } else {
@@ -118,12 +136,11 @@ export async function getStreakInfo(): Promise<StreakData> {
         }
     }
 
-    // Calculate longest streak (simple version)
+    // Calculate longest streak
     let longestStreak = 0;
     let tempStreak = 0;
     let prevDateTimestamp = 0;
 
-    // Re-sort ascending for longest streak calc
     const sortedDatesAsc = [...uniqueDates].reverse();
 
     sortedDatesAsc.forEach(dateStr => {
@@ -145,7 +162,7 @@ export async function getStreakInfo(): Promise<StreakData> {
     return {
       currentStreak,
       longestStreak,
-      streakGoal: 50, // Default goal
+      streakGoal: 50,
       isActive,
       lastActivityDate: new Date(uniqueDates[0])
     };
@@ -164,14 +181,20 @@ export async function getStreakInfo(): Promise<StreakData> {
 /**
  * Get activity breakdown
  */
-export async function getActivityBreakdown(): Promise<Activity[]> {
+export async function getActivityBreakdown(language?: string): Promise<Activity[]> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('duolingoactivity')
       .select('*')
       .eq('user_id', TARGET_USER_ID)
       .order('date', { ascending: false })
       .limit(10);
+
+    if (language) {
+      query = query.ilike('language', language);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
