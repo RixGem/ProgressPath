@@ -2,9 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { BookOpen, Languages, Home, LogOut, Settings, Globe } from 'lucide-react'
+import { BookOpen, Languages, Home, LogOut, Settings, Globe, BarChart3, ChevronDown } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import ThemeToggle from './ThemeToggle'
 
 export default function Navigation() {
@@ -12,11 +12,24 @@ export default function Navigation() {
   const router = useRouter()
   const { user, signOut } = useAuth()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [openDropdown, setOpenDropdown] = useState(null)
+  const dropdownRef = useRef(null)
 
   // Don't show navigation on login page
   if (pathname === '/login') {
     return null
   }
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpenDropdown(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleLogout = async () => {
     try {
@@ -31,13 +44,104 @@ export default function Navigation() {
     }
   }
 
-  const navItems = [
+  const toggleDropdown = (dropdownName) => {
+    setOpenDropdown(openDropdown === dropdownName ? null : dropdownName)
+  }
+
+  // Helper to check if any path in a group is active
+  const isPathGroupActive = (paths) => {
+    return paths.some(path => pathname === path || pathname.startsWith(path + '/'))
+  }
+
+  const simpleNavItems = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/books', label: 'Books', icon: BookOpen },
-    { href: '/french', label: 'French', icon: Languages },
-    { href: '/german', label: 'German', icon: Globe },
     { href: '/embed/settings', label: 'Embed', icon: Settings },
   ]
+
+  const dashboardItem = {
+    label: 'Dashboard',
+    icon: BarChart3,
+    paths: ['/dashboard'],
+    items: [
+      { href: '/dashboard', label: 'Overview', icon: BarChart3 },
+      { href: '/dashboard/french', label: 'French Stats', icon: Languages },
+      { href: '/dashboard/german', label: 'German Stats', icon: Globe },
+    ]
+  }
+
+  const languageItems = [
+    {
+      label: 'French',
+      icon: Languages,
+      emoji: '🇫🇷',
+      paths: ['/french', '/dashboard/french'],
+      items: [
+        { href: '/french', label: 'Learn French', icon: Languages },
+        { href: '/dashboard/french', label: 'French Dashboard', icon: BarChart3 },
+      ]
+    },
+    {
+      label: 'German',
+      icon: Globe,
+      emoji: '🇩🇪',
+      paths: ['/german', '/dashboard/german'],
+      items: [
+        { href: '/german', label: 'Learn German', icon: Globe },
+        { href: '/dashboard/german', label: 'German Dashboard', icon: BarChart3 },
+      ]
+    }
+  ]
+
+  const renderDropdownMenu = (menu, menuKey) => {
+    const isOpen = openDropdown === menuKey
+    const isActive = isPathGroupActive(menu.paths)
+
+    return (
+      <div key={menuKey} className="relative" ref={menuKey === openDropdown ? dropdownRef : null}>
+        <button
+          onClick={() => toggleDropdown(menuKey)}
+          className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 ${
+            isActive
+              ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-medium'
+              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+          }`}
+          title={menu.label}
+        >
+          <menu.icon className="w-5 h-5" />
+          <span className="hidden sm:inline">{menu.label}</span>
+          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {/* Dropdown Menu */}
+        {isOpen && (
+          <div className="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
+            {menu.items.map((item) => {
+              const ItemIcon = item.icon
+              const isItemActive = pathname === item.href
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setOpenDropdown(null)}
+                  className={`flex items-center space-x-3 px-4 py-2 transition-colors duration-150 ${
+                    isItemActive
+                      ? 'bg-primary-50 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 font-medium'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {menu.emoji && <span className="text-lg">{menu.emoji}</span>}
+                  {!menu.emoji && <ItemIcon className="w-4 h-4" />}
+                  <span>{item.label}</span>
+                  {isItemActive && <span className="ml-auto text-primary-600 dark:text-primary-400">✓</span>}
+                </Link>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <nav className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-50 transition-colors duration-200">
@@ -65,17 +169,19 @@ export default function Navigation() {
           {/* Navigation Items and Actions */}
           <div className="flex items-center space-x-1 sm:space-x-2">
             <div className="flex space-x-1">
-              {navItems.map((item) => {
+              {/* Simple nav items */}
+              {simpleNavItems.map((item) => {
                 const Icon = item.icon
                 const isActive = pathname === item.href
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 ${isActive
-                      ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-medium'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
-                      }`}
+                    className={`flex items-center space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 ${
+                      isActive
+                        ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-medium'
+                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+                    }`}
                     title={item.label}
                   >
                     <Icon className="w-5 h-5" />
@@ -83,6 +189,12 @@ export default function Navigation() {
                   </Link>
                 )
               })}
+
+              {/* Dashboard dropdown */}
+              {renderDropdownMenu(dashboardItem, 'dashboard')}
+
+              {/* Language dropdowns */}
+              {languageItems.map((menu, index) => renderDropdownMenu(menu, `language-${index}`))}
             </div>
 
             <ThemeToggle />
