@@ -62,6 +62,51 @@
   grid-template-columns: 1fr;
 }
 
+/* Stat Card (for vocabulary stats) */
+.statCard {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.statCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.statIcon {
+  font-size: 40px;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  border-radius: 12px;
+}
+
+.statInfo {
+  flex: 1;
+}
+
+.statValue {
+  font-size: 32px;
+  font-weight: 700;
+  color: #667eea;
+  margin-bottom: 4px;
+}
+
+.statLabel {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
 /* Streak Card */
 .streakCard {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
@@ -196,20 +241,6 @@
   gap: 4px;
 }
 
-.statLabel {
-  font-size: 12px;
-  color: #6b7280;
-  text-transform: uppercase;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-.statValue {
-  font-size: 20px;
-  font-weight: 700;
-  color: #667eea;
-}
-
 .languageFooter {
   display: flex;
   justify-content: space-between;
@@ -279,6 +310,40 @@
   font-size: 16px;
   font-weight: 700;
   color: #10b981;
+}
+
+/* Quick Links */
+.quickLinks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.quickLink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+}
+
+.quickLink:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.quickLinkIcon {
+  font-size: 28px;
+}
+
+.quickLinkText {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
 }
 
 /* Loading & Error */
@@ -355,16 +420,28 @@
     color: #f9fafb;
   }
 
+  .statCard {
+    background: #1f2937;
+  }
+
+  .statIcon {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+  }
+
+  .statValue {
+    color: #a78bfa;
+  }
+
+  .statLabel {
+    color: #9ca3af;
+  }
+
   .languageCard {
     background: #1f2937;
   }
 
   .languageName {
     color: #f9fafb;
-  }
-
-  .statValue {
-    color: #a78bfa;
   }
 
   .languageFooter {
@@ -390,6 +467,14 @@
 
   .activityTime {
     color: #9ca3af;
+  }
+
+  .quickLink {
+    background: #1f2937;
+  }
+
+  .quickLinkText {
+    color: #f9fafb;
   }
 }
 
@@ -420,6 +505,10 @@
   .sectionTitle {
     font-size: 20px;
   }
+
+  .quickLinks {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 480px) {
@@ -443,5 +532,19 @@
 
   .languageStats {
     flex-wrap: wrap;
+  }
+
+  .statCard {
+    padding: 20px;
+  }
+
+  .statIcon {
+    font-size: 32px;
+    width: 50px;
+    height: 50px;
+  }
+
+  .statValue {
+    font-size: 28px;
   }
 }
