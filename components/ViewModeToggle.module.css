@@ -1,0 +1,167 @@
+.container {
+  display: inline-flex;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  padding: 4px;
+  transition: background 0.2s ease;
+}
+
+.container:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* Size variants */
+.small {
+  padding: 2px;
+  gap: 2px;
+}
+
+.medium {
+  padding: 4px;
+  gap: 4px;
+}
+
+.large {
+  padding: 6px;
+  gap: 6px;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: #666;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  min-width: 36px;
+  position: relative;
+  overflow: hidden;
+}
+
+.small .button {
+  padding: 6px 10px;
+  font-size: 14px;
+  min-width: 32px;
+}
+
+.large .button {
+  padding: 10px 14px;
+  font-size: 18px;
+  min-width: 40px;
+}
+
+.button:hover:not(.disabled) {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+}
+
+.button:focus-visible {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}
+
+.button:active:not(.disabled) {
+  transform: scale(0.95);
+}
+
+.button.active {
+  background: #667eea;
+  color: white;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.button.active:hover {
+  background: #5568d3;
+}
+
+.button.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.icon {
+  font-size: 1.2em;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.label {
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+/* Animation for mode change */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.button.active {
+  animation: pulse 0.3s ease-out;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .container {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .container:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .button {
+    color: #aaa;
+  }
+
+  .button:hover:not(.disabled) {
+    background: rgba(102, 126, 234, 0.2);
+    color: #8fa3ff;
+  }
+
+  .button.active {
+    background: #5568d3;
+    color: white;
+  }
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .button {
+    padding: 6px 10px;
+  }
+
+  .label {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    gap: 2px;
+    padding: 2px;
+  }
+
+  .button {
+    padding: 6px 8px;
+    min-width: 32px;
+  }
+
+  .icon {
+    font-size: 1em;
+  }
+}
