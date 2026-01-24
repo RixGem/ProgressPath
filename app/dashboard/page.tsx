@@ -3,6 +3,8 @@
  * Overview of all learning progress
  */
 
+'use client';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import XPStatsCard from '@/components/XPStatsCard';
