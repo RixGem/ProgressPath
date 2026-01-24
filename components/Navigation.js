@@ -85,7 +85,7 @@ export default function Navigation() {
         {({ open }) => (
           <>
             <Menu.Button
-              className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+              className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 whitespace-nowrap h-10 ${
                 isActive
                   ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-medium'
                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
@@ -94,19 +94,19 @@ export default function Navigation() {
               aria-label={`${menu.label} menu`}
             >
               {menu.emoji ? (
-                <span className="text-lg" aria-hidden="true">{menu.emoji}</span>
+                <span className="text-lg leading-none" aria-hidden="true">{menu.emoji}</span>
               ) : (
                 <menu.icon className="w-5 h-5" aria-hidden="true" />
               )}
               <span className="hidden sm:inline text-sm md:text-base">{menu.label}</span>
-              <ChevronDown 
+              <ChevronDown
                 className={`w-4 h-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
                 aria-hidden="true"
               />
             </Menu.Button>
 
             <Menu.Items
-              className="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50 focus:outline-none animate-dropdown"
+              className="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-[999] focus:outline-none animate-dropdown"
             >
               {menu.items.map((item) => {
                 const ItemIcon = item.icon
@@ -174,7 +174,7 @@ export default function Navigation() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                    className={`flex items-center space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 whitespace-nowrap h-10 ${
                       isActive
                         ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-medium'
                         : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'

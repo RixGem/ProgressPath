@@ -1,253 +1,239 @@
 /**
- * Database query functions for XP data
+ * Database query functions for Duolingo activity data
  */
 
+import { supabase } from '@/lib/supabase';
 import type { ChartDataPoint, TimePeriod } from '@/types/xpChart';
-import type { DashboardData, Activity, TimeStats, StreakData, Language } from '@/types/dashboard';
-import { getXPStats } from '@/utils/xpCalculations';
-import { getDataForPeriod } from '@/utils/xpChartData';
+import type { DashboardData, Activity, TimeStats, StreakData, Language, LanguageStats } from '@/types/dashboard';
+
+const TARGET_USER_ID = 'f484bfe8-2771-4e0f-b765-830fbdb3c74e';
 
 /**
- * Mock database connection
- * In production, replace with actual Supabase client
+ * Get daily XP for charts
  */
-const mockDB = {
-  users: new Map(),
-  activities: new Map(),
-  xpData: new Map()
-};
-
-/**
- * Fetch XP data for a specific user and period
- */
-export async function fetchXPData(
-  userId: string,
-  period: TimePeriod = 'weekly',
-  language?: Language
-): Promise<ChartDataPoint[]> {
+export async function getDailyXP(period: TimePeriod = 'weekly'): Promise<ChartDataPoint[]> {
   try {
-    // TODO: Replace with actual database query
-    // const { data, error } = await supabase
-    //   .from('xp_activities')
-    //   .select('*')
-    //   .eq('user_id', userId)
-    //   .gte('created_at', getStartDateForPeriod(period));
-    
-    // For now, return mock data
-    await simulateDelay(300);
-    const data = getDataForPeriod(period);
-    
-    // Filter by language if specified
-    if (language && language !== 'all') {
-      return data.filter(() => Math.random() > 0.3); // Mock filtering
+    const endDate = new Date();
+    let startDate = new Date();
+
+    switch (period) {
+      case 'daily':
+        startDate.setDate(endDate.getDate() - 30);
+        break;
+      case 'weekly':
+        startDate.setDate(endDate.getDate() - 90);
+        break;
+      case 'monthly':
+        startDate.setFullYear(endDate.getFullYear() - 1);
+        break;
+      case 'yearly':
+        startDate.setFullYear(endDate.getFullYear() - 5);
+        break;
+      default:
+        startDate.setDate(endDate.getDate() - 30);
     }
-    
-    return data;
+
+    const { data, error } = await supabase
+      .from('duolingoactivity')
+      .select('date, xp, language')
+      .eq('user_id', TARGET_USER_ID)
+      .gte('date', startDate.toISOString())
+      .lte('date', endDate.toISOString())
+      .order('date', { ascending: true });
+
+    if (error) throw error;
+
+    // Aggregate XP by date
+    const xpByDate = new Map<string, number>();
+
+    data?.forEach(row => {
+      const dateStr = new Date(row.date).toISOString().split('T')[0];
+      const currentXP = xpByDate.get(dateStr) || 0;
+      xpByDate.set(dateStr, currentXP + (row.xp || 0));
+    });
+
+    // Format for chart
+    const chartData: ChartDataPoint[] = Array.from(xpByDate.entries()).map(([date, xp]) => ({
+      date,
+      xp,
+      label: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      timestamp: new Date(date).getTime()
+    })).sort((a, b) => a.timestamp - b.timestamp);
+
+    return chartData;
   } catch (error) {
-    console.error('Error fetching XP data:', error);
-    throw new Error('Failed to fetch XP data');
+    console.error('Error fetching daily XP:', error);
+    return [];
   }
 }
 
 /**
- * Fetch dashboard data for a user
+ * Get streak information
  */
-export async function fetchDashboardData(
-  userId: string,
-  language?: Language
-): Promise<DashboardData> {
+export async function getStreakInfo(): Promise<StreakData> {
   try {
-    await simulateDelay(500);
-    
-    // Fetch XP data
-    const chartData = await fetchXPData(userId, 'weekly', language);
-    const totalXP = chartData.reduce((sum, point) => sum + point.xp, 0);
-    const xpStats = getXPStats(totalXP);
-    
-    // Fetch recent activities
-    const recentActivities = await fetchRecentActivities(userId, 10, language);
-    
-    // Fetch time stats
-    const timeStats = await fetchTimeStats(userId, language);
-    
-    // Fetch streak data
-    const streakData = await fetchStreakData(userId, language);
-    
-    return {
-      xpStats,
-      chartData,
-      recentActivities,
-      timeStats,
-      streakData,
-      language
-    };
-  } catch (error) {
-    console.error('Error fetching dashboard data:', error);
-    throw new Error('Failed to fetch dashboard data');
-  }
-}
+    const { data, error } = await supabase
+      .from('duolingoactivity')
+      .select('date')
+      .eq('user_id', TARGET_USER_ID)
+      .order('date', { ascending: false });
 
-/**
- * Fetch recent activities
- */
-export async function fetchRecentActivities(
-  userId: string,
-  limit: number = 10,
-  language?: Language
-): Promise<Activity[]> {
-  try {
-    await simulateDelay(200);
-    
-    // Mock activities
-    const activityTypes: Activity['type'][] = ['lesson', 'practice', 'review', 'achievement'];
-    const activities: Activity[] = [];
-    
-    for (let i = 0; i < limit; i++) {
-      const type = activityTypes[Math.floor(Math.random() * activityTypes.length)];
-      const date = new Date();
-      date.setHours(date.getHours() - i * 2);
-      
-      activities.push({
-        id: `activity-${i}`,
-        type,
-        title: `${type.charAt(0).toUpperCase() + type.slice(1)} completed`,
-        description: `Completed a ${type} activity`,
-        xpGained: Math.floor(Math.random() * 100) + 50,
-        timestamp: date,
-        language: language || 'french'
-      });
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return {
+        currentStreak: 0,
+        longestStreak: 0,
+        streakGoal: 30,
+        isActive: false,
+        lastActivityDate: new Date()
+      };
     }
-    
-    return activities;
-  } catch (error) {
-    console.error('Error fetching activities:', error);
-    throw new Error('Failed to fetch activities');
-  }
-}
 
-/**
- * Fetch time statistics
- */
-export async function fetchTimeStats(
-  userId: string,
-  language?: Language
-): Promise<TimeStats> {
-  try {
-    await simulateDelay(150);
-    
-    // Mock time stats
-    const totalMinutes = Math.floor(Math.random() * 10000) + 5000;
-    const todayMinutes = Math.floor(Math.random() * 120) + 30;
-    const weekMinutes = Math.floor(Math.random() * 600) + 300;
-    const monthMinutes = Math.floor(Math.random() * 2400) + 1200;
-    const averageDaily = Math.floor(totalMinutes / 90);
-    
-    return {
-      totalMinutes,
-      todayMinutes,
-      weekMinutes,
-      monthMinutes,
-      averageDaily
-    };
-  } catch (error) {
-    console.error('Error fetching time stats:', error);
-    throw new Error('Failed to fetch time stats');
-  }
-}
+    // Get unique dates
+    const uniqueDates = Array.from(new Set(data.map(d => new Date(d.date).toISOString().split('T')[0]))).sort().reverse();
 
-/**
- * Fetch streak data
- */
-export async function fetchStreakData(
-  userId: string,
-  language?: Language
-): Promise<StreakData> {
-  try {
-    await simulateDelay(150);
-    
-    // Mock streak data
-    const currentStreak = Math.floor(Math.random() * 30) + 1;
-    const longestStreak = Math.max(currentStreak, Math.floor(Math.random() * 50) + 10);
-    
+    // Calculate current streak
+    let currentStreak = 0;
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+    // Check if active (activity today)
+    const isActive = uniqueDates.includes(today);
+
+    // Start counting from today or yesterday
+    let checkDate = isActive ? today : yesterday;
+
+    // If no activity today or yesterday, streak is 0 (unless we want to show broken streak state)
+    if (!uniqueDates.includes(today) && !uniqueDates.includes(yesterday)) {
+        currentStreak = 0;
+    } else {
+        for (const date of uniqueDates) {
+            if (date === checkDate) {
+                currentStreak++;
+                const prevDate = new Date(checkDate);
+                prevDate.setDate(prevDate.getDate() - 1);
+                checkDate = prevDate.toISOString().split('T')[0];
+            }
+        }
+    }
+
+    // Calculate longest streak (simple version)
+    let longestStreak = 0;
+    let tempStreak = 0;
+    let prevDateTimestamp = 0;
+
+    // Re-sort ascending for longest streak calc
+    const sortedDatesAsc = [...uniqueDates].reverse();
+
+    sortedDatesAsc.forEach(dateStr => {
+        const timestamp = new Date(dateStr).getTime();
+        if (prevDateTimestamp === 0) {
+            tempStreak = 1;
+        } else {
+            const diffDays = Math.round((timestamp - prevDateTimestamp) / (1000 * 60 * 60 * 24));
+            if (diffDays === 1) {
+                tempStreak++;
+            } else {
+                tempStreak = 1;
+            }
+        }
+        if (tempStreak > longestStreak) longestStreak = tempStreak;
+        prevDateTimestamp = timestamp;
+    });
+
     return {
       currentStreak,
       longestStreak,
+      streakGoal: 50, // Default goal
+      isActive,
+      lastActivityDate: new Date(uniqueDates[0])
+    };
+  } catch (error) {
+    console.error('Error fetching streak info:', error);
+    return {
+      currentStreak: 0,
+      longestStreak: 0,
       streakGoal: 30,
-      isActive: Math.random() > 0.2,
+      isActive: false,
       lastActivityDate: new Date()
     };
-  } catch (error) {
-    console.error('Error fetching streak data:', error);
-    throw new Error('Failed to fetch streak data');
   }
 }
 
 /**
- * Save XP activity
+ * Get activity breakdown
  */
-export async function saveXPActivity(
-  userId: string,
-  xp: number,
-  activityType: string,
-  description?: string,
-  language?: Language
-): Promise<Activity> {
+export async function getActivityBreakdown(): Promise<Activity[]> {
   try {
-    await simulateDelay(200);
-    
-    // TODO: Implement actual database save
-    // const { data, error } = await supabase
-    //   .from('xp_activities')
-    //   .insert({
-    //     user_id: userId,
-    //     xp,
-    //     activity_type: activityType,
-    //     description,
-    //     language,
-    //     created_at: new Date()
-    //   })
-    //   .select()
-    //   .single();
-    
-    const activity: Activity = {
-      id: `activity-${Date.now()}`,
-      type: activityType as Activity['type'],
-      title: activityType,
-      description,
-      xpGained: xp,
-      timestamp: new Date(),
-      language
-    };
-    
-    return activity;
+    const { data, error } = await supabase
+      .from('duolingoactivity')
+      .select('*')
+      .eq('user_id', TARGET_USER_ID)
+      .order('date', { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+
+    return (data || []).map((row, index) => ({
+      id: row.id || `activity-${index}`,
+      type: (row.event_type || 'practice') as Activity['type'],
+      title: row.event_type || 'Lesson',
+      description: row.language ? `${row.language} practice` : 'Language practice',
+      xpGained: row.xp || 0,
+      timestamp: new Date(row.date),
+      language: row.language?.toLowerCase() as Language
+    }));
   } catch (error) {
-    console.error('Error saving XP activity:', error);
-    throw new Error('Failed to save XP activity');
+    console.error('Error fetching activity breakdown:', error);
+    return [];
   }
 }
 
 /**
- * Helper: Simulate network delay
+ * Get language summary
  */
-function simulateDelay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+export async function getLanguageSummary(): Promise<LanguageStats[]> {
+  try {
+    const { data, error } = await supabase
+      .from('duolingoactivity')
+      .select('language, xp, date')
+      .eq('user_id', TARGET_USER_ID);
 
-/**
- * Helper: Get start date for period
- */
-function getStartDateForPeriod(period: TimePeriod): Date {
-  const now = new Date();
-  switch (period) {
-    case 'daily':
-      return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    case 'weekly':
-      return new Date(now.getTime() - 12 * 7 * 24 * 60 * 60 * 1000);
-    case 'monthly':
-      return new Date(now.getTime() - 12 * 30 * 24 * 60 * 60 * 1000);
-    case 'yearly':
-      return new Date(now.getTime() - 5 * 365 * 24 * 60 * 60 * 1000);
-    default:
-      return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    if (error) throw error;
+
+    const statsMap = new Map<string, LanguageStats>();
+
+    data?.forEach(row => {
+      const lang = (row.language || 'unknown').toLowerCase();
+      const current = statsMap.get(lang) || {
+        language: lang as Language,
+        displayName: row.language || 'Unknown',
+        totalXP: 0,
+        level: 1,
+        lessonsCompleted: 0,
+        timeSpent: 0,
+        streak: 0
+      };
+
+      current.totalXP += (row.xp || 0);
+      current.lessonsCompleted += 1;
+      // Estimate time: 5 mins per lesson/activity
+      current.timeSpent += 5;
+
+      statsMap.set(lang, current);
+    });
+
+    // Calculate levels
+    const stats = Array.from(statsMap.values()).map(stat => ({
+      ...stat,
+      level: Math.floor(Math.sqrt(stat.totalXP / 100)) + 1
+    }));
+
+    return stats;
+  } catch (error) {
+    console.error('Error fetching language summary:', error);
+    return [];
   }
 }
+
