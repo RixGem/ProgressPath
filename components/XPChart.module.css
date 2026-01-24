@@ -1,0 +1,445 @@
+.container {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.container:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.titleSection {
+  flex: 1;
+  min-width: 200px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 4px 0;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.controlGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.controlLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: #4b5563;
+  white-space: nowrap;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 4px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.controlButton {
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.controlButton:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+}
+
+.controlButton.active {
+  background: #667eea;
+  color: white;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+}
+
+.goalToggle {
+  padding: 8px 16px;
+  border: 2px solid #f59e0b;
+  background: transparent;
+  color: #f59e0b;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.goalToggle:hover {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.goalToggle.active {
+  background: #f59e0b;
+  color: white;
+}
+
+/* Stats */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.statCard {
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  padding: 16px;
+  border-radius: 12px;
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.statCard:hover {
+  transform: translateY(-2px);
+}
+
+.statLabel {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.statValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.statValue.up {
+  color: #10b981;
+}
+
+.statValue.down {
+  color: #ef4444;
+}
+
+.statValue.stable {
+  color: #6b7280;
+}
+
+/* Chart */
+.chartWrapper {
+  width: 100%;
+  min-height: 300px;
+  margin-top: 16px;
+}
+
+/* Tooltip */
+.tooltip {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.tooltipLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+}
+
+.tooltipValue,
+.tooltipGoal {
+  font-size: 13px;
+  color: #4b5563;
+  margin: 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tooltipDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* Loading */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #f3f4f6;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading p {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Error */
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.errorIcon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.errorMessage {
+  color: #ef4444;
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.retryButton {
+  padding: 10px 20px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.retryButton:hover {
+  background: #5568d3;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .container {
+    background: #1f2937;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  }
+
+  .container:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .title {
+    color: #f9fafb;
+  }
+
+  .subtitle {
+    color: #9ca3af;
+  }
+
+  .controlLabel {
+    color: #d1d5db;
+  }
+
+  .buttonGroup {
+    background: #374151;
+  }
+
+  .controlButton {
+    color: #d1d5db;
+  }
+
+  .controlButton:hover {
+    background: rgba(139, 92, 246, 0.2);
+    color: #a78bfa;
+  }
+
+  .controlButton.active {
+    background: #8b5cf6;
+    color: white;
+  }
+
+  .goalToggle {
+    border-color: #fbbf24;
+    color: #fbbf24;
+  }
+
+  .goalToggle:hover {
+    background: rgba(251, 191, 36, 0.1);
+  }
+
+  .goalToggle.active {
+    background: #fbbf24;
+    color: #1f2937;
+  }
+
+  .statCard {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+  }
+
+  .statLabel {
+    color: #9ca3af;
+  }
+
+  .statValue {
+    color: #f9fafb;
+  }
+
+  .tooltip {
+    background: #1f2937;
+    border-color: #4b5563;
+  }
+
+  .tooltipLabel {
+    color: #f9fafb;
+  }
+
+  .tooltipValue,
+  .tooltipGoal {
+    color: #d1d5db;
+  }
+
+  .loading p {
+    color: #9ca3af;
+  }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .controls {
+    justify-content: flex-start;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+
+  .controls {
+    width: 100%;
+  }
+
+  .controlGroup {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .buttonGroup {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .controlButton {
+    flex: 1;
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .statValue {
+    font-size: 20px;
+  }
+
+  .chartWrapper {
+    min-height: 250px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 12px;
+  }
+
+  .header {
+    margin-bottom: 16px;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+
+  .subtitle {
+    font-size: 12px;
+  }
+
+  .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .statCard {
+    padding: 12px;
+  }
+
+  .statValue {
+    font-size: 18px;
+  }
+}
