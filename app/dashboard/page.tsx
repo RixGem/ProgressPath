@@ -216,7 +216,7 @@ export default function DashboardPage() {
           <div className={styles.chartsGrid}>
             {data && (
               <XPChart
-                userId="default"
+                userId={userId}
                 goalXP={50}
                 initialConfig={{ period: 'weekly', type: 'area' }}
               />

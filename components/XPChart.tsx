@@ -95,14 +95,17 @@ export default function XPChart({
       setError(null);
 
       try {
-        // In production, fetch from API
-        // const response = await fetch(`/api/dashboard/xp?period=${config.period}&userId=${userId}`);
-        // const data = await response.json();
+        // Fetch from API
+        const response = await fetch(`/api/dashboard/xp?period=${config.period}&userId=${userId}`);
+        const result = await response.json();
 
-        // For now, use mock data
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const mockData = getDataForPeriod(config.period);
-        setRawData(mockData);
+        if (result.success && Array.isArray(result.data.data)) {
+           setRawData(result.data.data);
+        } else {
+           // Fallback to empty array if no data or error
+           setRawData([]);
+           if (result.error) console.error('API Error:', result.error);
+        }
       } catch (err) {
         setError('Failed to load chart data');
         console.error('Chart data error:', err);
