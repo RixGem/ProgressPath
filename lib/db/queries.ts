@@ -109,7 +109,7 @@ export async function getStreakInfo(language?: string): Promise<StreakData> {
     }
 
     // Get unique dates
-    const uniqueDates = Array.from(new Set(data.map(d => new Date(d.date).toISOString().split('T')[0]))).sort().reverse();
+    const uniqueDates: string[] = Array.from(new Set((data || []).map(d => new Date(d.date).toISOString().split('T')[0]))).sort().reverse();
 
     // Calculate current streak
     let currentStreak = 0;
