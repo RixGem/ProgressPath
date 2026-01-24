@@ -185,11 +185,11 @@ export default function XPChart({
     };
 
     const xAxisProps = {
-      dataKey: 'label',
+      dataKey: 'label' as const,
       stroke: theme.textColor,
       style: { fontSize: '12px' },
       angle: chartData.data.length > 10 ? -45 : 0,
-      textAnchor: chartData.data.length > 10 ? 'end' : 'middle',
+      textAnchor: (chartData.data.length > 10 ? 'end' : 'middle') as 'end' | 'middle',
       height: chartData.data.length > 10 ? 80 : 60
     };
 
