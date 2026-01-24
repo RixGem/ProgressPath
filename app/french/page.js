@@ -280,6 +280,13 @@ export default function FrenchPage() {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">French Learning</h1>
             <p className="text-gray-600 dark:text-gray-300 mt-2">Track your daily learning activities and progress</p>
           </div>
+            <button
+            onClick={() => setShowFlashcards(true)}
+            className="btn-secondary flex items-center space-x-2 mr-2"
+          >
+            <GalleryHorizontal className="w-5 h-5" />
+            <span>Review Cards</span>
+          </button>
           <button
             onClick={() => setShowForm(!showForm)}
             className="btn-primary flex items-center space-x-2"
