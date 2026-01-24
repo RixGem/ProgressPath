@@ -19,11 +19,6 @@ export default function Navigation() {
   const frenchDropdownRef = useRef(null)
   const germanDropdownRef = useRef(null)
 
-  // Don't show navigation on login page
-  if (pathname === '/login') {
-    return null
-  }
-
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
@@ -51,6 +46,11 @@ export default function Navigation() {
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [openDropdown])
+
+  // Don't show navigation on login page - MOVED AFTER ALL HOOKS
+  if (pathname === '/login') {
+    return null
+  }
 
   const handleLogout = async () => {
     try {
