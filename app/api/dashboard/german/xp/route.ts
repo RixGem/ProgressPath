@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     // Always use TARGET_USER_ID to match database records
     const userId = TARGET_USER_ID;
     const period = (searchParams.get('period') as TimePeriod) || 'weekly';
+    const languageCode = 'de'; // Use language_code instead of language name
 
     // Validate period
     const validPeriods: TimePeriod[] = ['daily', 'weekly', 'monthly', 'yearly'];
@@ -27,13 +28,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch German-specific dashboard data
+    // Fetch German-specific dashboard data using language_code
     const [chartData, streakData, activities, timeStats, vocabStats] = await Promise.all([
-      getDailyXP(userId, period, 'German'),
-      getStreakInfo(userId, 'German'),
-      getActivityBreakdown(userId, 'German'),
-      getTimeStats(userId, 'German'),
-      getVocabularyStats(userId, 'German')
+      getDailyXP(userId, period, languageCode),
+      getStreakInfo(userId, languageCode),
+      getActivityBreakdown(userId, languageCode),
+      getTimeStats(userId, languageCode),
+      getVocabularyStats(userId, languageCode)
     ]);
 
     // Calculate total XP for German
@@ -53,6 +54,7 @@ export async function GET(request: NextRequest) {
       metadata: {
         userId,
         language: 'german',
+        languageCode,
         period,
         generatedAt: new Date().toISOString()
       }
@@ -93,7 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     // TODO: Save to database with language tag
-    // const result = await saveXPActivity(userId, xp, activityType, description, 'german');
+    // const result = await saveXPActivity(userId, xp, activityType, description, 'de');
 
     return NextResponse.json({
       success: true,
@@ -102,6 +104,7 @@ export async function POST(request: NextRequest) {
         xp,
         activityType,
         language: 'german',
+        languageCode: 'de',
         timestamp: new Date().toISOString()
       }
     });
