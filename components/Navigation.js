@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { BookOpen, Languages, Home, LogOut, Settings, Globe, BarChart3, ChevronDown } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
+import { Menu } from '@headlessui/react'
 import ThemeToggle from './ThemeToggle'
 
 export default function Navigation() {
@@ -12,56 +13,8 @@ export default function Navigation() {
   const router = useRouter()
   const { user, signOut } = useAuth()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [openDropdown, setOpenDropdown] = useState(null)
-  
-  // Create separate refs for each dropdown to fix click-outside detection
-  const dashboardDropdownRef = useRef(null)
-  const frenchDropdownRef = useRef(null)
-  const germanDropdownRef = useRef(null)
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event) {
-      // Check each dropdown ref separately
-      const clickedOutsideDashboard = dashboardDropdownRef.current && 
-        !dashboardDropdownRef.current.contains(event.target)
-      const clickedOutsideFrench = frenchDropdownRef.current && 
-        !frenchDropdownRef.current.contains(event.target)
-      const clickedOutsideGerman = germanDropdownRef.current && 
-        !germanDropdownRef.current.contains(event.target)
-
-      // Only close if we clicked outside the currently open dropdown
-      if (openDropdown === 'dashboard' && clickedOutsideDashboard) {
-        setOpenDropdown(null)
-      } else if (openDropdown === 'language-0' && clickedOutsideFrench) {
-        setOpenDropdown(null)
-      } else if (openDropdown === 'language-1' && clickedOutsideGerman) {
-        setOpenDropdown(null)
-      }
-    }
-    
-    // Only add listener if a dropdown is open
-    if (openDropdown) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [openDropdown])
-
-  // Close dropdown on Escape key
-  useEffect(() => {
-    function handleEscapeKey(event) {
-      if (event.key === 'Escape' && openDropdown) {
-        setOpenDropdown(null)
-      }
-    }
-    
-    if (openDropdown) {
-      document.addEventListener('keydown', handleEscapeKey)
-      return () => document.removeEventListener('keydown', handleEscapeKey)
-    }
-  }, [openDropdown])
-
-  // Don't show navigation on login page - MOVED AFTER ALL HOOKS
+  // Don't show navigation on login page
   if (pathname === '/login') {
     return null
   }
@@ -77,12 +30,6 @@ export default function Navigation() {
     } finally {
       setIsLoggingOut(false)
     }
-  }
-
-  // Fixed: Stop event propagation to prevent conflicts with click-outside detection
-  const toggleDropdown = (dropdownName, event) => {
-    event.stopPropagation()
-    setOpenDropdown(openDropdown === dropdownName ? null : dropdownName)
   }
 
   // Helper to check if any path in a group is active
@@ -130,91 +77,70 @@ export default function Navigation() {
     }
   ]
 
-  // Map menu keys to their respective refs
-  const getDropdownRef = (menuKey) => {
-    switch (menuKey) {
-      case 'dashboard':
-        return dashboardDropdownRef
-      case 'language-0':
-        return frenchDropdownRef
-      case 'language-1':
-        return germanDropdownRef
-      default:
-        return null
-    }
-  }
-
   const renderDropdownMenu = (menu, menuKey) => {
-    const isOpen = openDropdown === menuKey
     const isActive = isPathGroupActive(menu.paths)
-    const dropdownRef = getDropdownRef(menuKey)
 
     return (
-      <div key={menuKey} className="relative" ref={dropdownRef}>
-        <button
-          onClick={(e) => toggleDropdown(menuKey, e)}
-          className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 whitespace-nowrap ${
-            isActive
-              ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-medium'
-              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
-          }`}
-          title={menu.label}
-          aria-expanded={isOpen}
-          aria-haspopup="true"
-          aria-label={`${menu.label} menu`}
-        >
-          {menu.emoji ? (
-            <span className="text-lg" aria-hidden="true">{menu.emoji}</span>
-          ) : (
-            <menu.icon className="w-5 h-5" aria-hidden="true" />
-          )}
-          <span className="hidden sm:inline text-sm md:text-base">{menu.label}</span>
-          <ChevronDown 
-            className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-            aria-hidden="true"
-          />
-        </button>
+      <Menu as="div" key={menuKey} className="relative">
+        {({ open }) => (
+          <>
+            <Menu.Button
+              className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                isActive
+                  ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-medium'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+              }`}
+              title={menu.label}
+              aria-label={`${menu.label} menu`}
+            >
+              {menu.emoji ? (
+                <span className="text-lg" aria-hidden="true">{menu.emoji}</span>
+              ) : (
+                <menu.icon className="w-5 h-5" aria-hidden="true" />
+              )}
+              <span className="hidden sm:inline text-sm md:text-base">{menu.label}</span>
+              <ChevronDown 
+                className={`w-4 h-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                aria-hidden="true"
+              />
+            </Menu.Button>
 
-        {/* Dropdown Menu with improved transitions */}
-        {isOpen && (
-          <div 
-            className="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50 animate-dropdown"
-            role="menu"
-            aria-label={`${menu.label} submenu`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {menu.items.map((item) => {
-              const ItemIcon = item.icon
-              const isItemActive = pathname === item.href
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setOpenDropdown(null)
-                  }}
-                  className={`flex items-center space-x-3 px-4 py-2 transition-colors duration-150 ${
-                    isItemActive
-                      ? 'bg-primary-50 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 font-medium'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                  role="menuitem"
-                  aria-current={isItemActive ? 'page' : undefined}
-                >
-                  {item.emoji ? (
-                    <span className="text-lg" aria-hidden="true">{item.emoji}</span>
-                  ) : (
-                    <ItemIcon className="w-4 h-4" aria-hidden="true" />
-                  )}
-                  <span className="text-sm">{item.label}</span>
-                  {isItemActive && <span className="ml-auto text-primary-600 dark:text-primary-400" aria-label="Current page">✓</span>}
-                </Link>
-              )
-            })}
-          </div>
+            <Menu.Items
+              className="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50 focus:outline-none animate-dropdown"
+            >
+              {menu.items.map((item) => {
+                const ItemIcon = item.icon
+                const isItemActive = pathname === item.href
+                return (
+                  <Menu.Item key={item.href}>
+                    {({ active }) => (
+                      <Link
+                        href={item.href}
+                        className={`flex items-center space-x-3 px-4 py-2 transition-colors duration-150 ${
+                          isItemActive
+                            ? 'bg-primary-50 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 font-medium'
+                            : active
+                            ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                            : 'text-gray-700 dark:text-gray-300'
+                        }`}
+                        aria-current={isItemActive ? 'page' : undefined}
+                      >
+                        {item.emoji ? (
+                          <span className="text-lg" aria-hidden="true">{item.emoji}</span>
+                        ) : (
+                          <ItemIcon className="w-4 h-4" aria-hidden="true" />
+                        )}
+                        <span className="text-sm">{item.label}</span>
+                        {isItemActive && <span className="ml-auto text-primary-600 dark:text-primary-400" aria-label="Current page">✓</span>}
+                      </Link>
+                    )}
+                  </Menu.Item>
+                )
+              })}
+            </Menu.Items>
+          </>
         )}
-      </div>
+      </Menu>
     )
   }
 
