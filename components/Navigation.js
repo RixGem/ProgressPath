@@ -60,13 +60,13 @@ export default function Navigation() {
   ]
 
   const dashboardItem = {
-    label: 'Dashboard',
+    label: 'Dashboards',
     icon: BarChart3,
     paths: ['/dashboard'],
     items: [
       { href: '/dashboard', label: 'Overview', icon: BarChart3 },
-      { href: '/dashboard/french', label: 'French Stats', icon: Languages },
-      { href: '/dashboard/german', label: 'German Stats', icon: Globe },
+      { href: '/dashboard/french', label: 'French Dashboard', icon: Languages, emoji: '🇫🇷' },
+      { href: '/dashboard/german', label: 'German Dashboard', icon: Globe, emoji: '🇩🇪' },
     ]
   }
 
@@ -75,20 +75,20 @@ export default function Navigation() {
       label: 'French',
       icon: Languages,
       emoji: '🇫🇷',
-      paths: ['/french', '/dashboard/french'],
+      paths: ['/french'],
       items: [
         { href: '/french', label: 'Learn French', icon: Languages },
-        { href: '/dashboard/french', label: 'French Dashboard', icon: BarChart3 },
+        { href: '/french/review', label: 'Review', icon: BookOpen },
       ]
     },
     {
       label: 'German',
       icon: Globe,
       emoji: '🇩🇪',
-      paths: ['/german', '/dashboard/german'],
+      paths: ['/german'],
       items: [
         { href: '/german', label: 'Learn German', icon: Globe },
-        { href: '/dashboard/german', label: 'German Dashboard', icon: BarChart3 },
+        { href: '/german/review', label: 'Review', icon: BookOpen },
       ]
     }
   ]
@@ -101,15 +101,19 @@ export default function Navigation() {
       <div key={menuKey} className="relative" ref={menuKey === openDropdown ? dropdownRef : null}>
         <button
           onClick={() => toggleDropdown(menuKey)}
-          className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 ${
+          className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 whitespace-nowrap ${
             isActive
               ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-medium'
               : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
           }`}
           title={menu.label}
         >
-          <menu.icon className="w-5 h-5" />
-          <span className="hidden sm:inline">{menu.label}</span>
+          {menu.emoji ? (
+            <span className="text-lg">{menu.emoji}</span>
+          ) : (
+            <menu.icon className="w-5 h-5" />
+          )}
+          <span className="hidden sm:inline text-sm md:text-base">{menu.label}</span>
           <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
         </button>
 
@@ -130,9 +134,12 @@ export default function Navigation() {
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
-                  {menu.emoji && <span className="text-lg">{menu.emoji}</span>}
-                  {!menu.emoji && <ItemIcon className="w-4 h-4" />}
-                  <span>{item.label}</span>
+                  {item.emoji ? (
+                    <span className="text-lg">{item.emoji}</span>
+                  ) : (
+                    <ItemIcon className="w-4 h-4" />
+                  )}
+                  <span className="text-sm">{item.label}</span>
                   {isItemActive && <span className="ml-auto text-primary-600 dark:text-primary-400">✓</span>}
                 </Link>
               )
@@ -160,15 +167,11 @@ export default function Navigation() {
             <span className="inline md:hidden text-lg font-bold text-gray-900 dark:text-white whitespace-nowrap">
               Chris's Goal
             </span>
-            {/* Very small screens - even shorter */}
-            <span className="hidden xs:hidden text-base font-semibold text-gray-900 dark:text-white">
-              Goal
-            </span>
           </Link>
 
-          {/* Navigation Items and Actions */}
-          <div className="flex items-center space-x-1 sm:space-x-2">
-            <div className="flex space-x-1">
+          {/* Navigation Items and Actions - Scrollable on mobile */}
+          <div className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto scrollbar-hide">
+            <div className="flex space-x-1 flex-nowrap">
               {/* Simple nav items */}
               {simpleNavItems.map((item) => {
                 const Icon = item.icon
@@ -177,7 +180,7 @@ export default function Navigation() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 ${
+                    className={`flex items-center space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 whitespace-nowrap ${
                       isActive
                         ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-medium'
                         : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
@@ -185,7 +188,7 @@ export default function Navigation() {
                     title={item.label}
                   >
                     <Icon className="w-5 h-5" />
-                    <span className="hidden sm:inline">{item.label}</span>
+                    <span className="hidden sm:inline text-sm md:text-base">{item.label}</span>
                   </Link>
                 )
               })}
@@ -204,11 +207,11 @@ export default function Navigation() {
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="flex items-center space-x-2 px-2 sm:px-4 py-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center space-x-2 px-2 sm:px-4 py-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                 title="Sign out"
               >
                 <LogOut className="w-4 h-4" />
-                <span className="font-medium hidden sm:inline">
+                <span className="font-medium hidden sm:inline text-sm md:text-base">
                   {isLoggingOut ? 'Logging out...' : 'Logout'}
                 </span>
               </button>
@@ -216,6 +219,17 @@ export default function Navigation() {
           </div>
         </div>
       </div>
+
+      {/* Mobile: Add scrollbar hide utility */}
+      <style jsx>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </nav>
   )
 }
