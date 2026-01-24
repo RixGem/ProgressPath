@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     // Always use TARGET_USER_ID to match database records
     const userId = TARGET_USER_ID;
     const period = (searchParams.get('period') as TimePeriod) || 'weekly';
+    const languageCode = 'fr'; // Use language_code instead of language name
 
     // Validate period
     const validPeriods: TimePeriod[] = ['daily', 'weekly', 'monthly', 'yearly'];
@@ -27,14 +28,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch French-specific dashboard data
+    // Fetch French-specific dashboard data using language_code
     // Parallel fetch
     const [chartData, streakData, activities, timeStats, vocabStats] = await Promise.all([
-      getDailyXP(userId, period, 'French'),
-      getStreakInfo(userId, 'French'),
-      getActivityBreakdown(userId, 'French'),
-      getTimeStats(userId, 'French'),
-      getVocabularyStats(userId, 'French')
+      getDailyXP(userId, period, languageCode),
+      getStreakInfo(userId, languageCode),
+      getActivityBreakdown(userId, languageCode),
+      getTimeStats(userId, languageCode),
+      getVocabularyStats(userId, languageCode)
     ]);
 
     // Calculate total XP for French
@@ -54,6 +55,7 @@ export async function GET(request: NextRequest) {
       metadata: {
         userId,
         language: 'french',
+        languageCode,
         period,
         generatedAt: new Date().toISOString()
       }
@@ -94,7 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     // TODO: Save to database with language tag
-    // const result = await saveXPActivity(userId, xp, activityType, description, 'french');
+    // const result = await saveXPActivity(userId, xp, activityType, description, 'fr');
 
     return NextResponse.json({
       success: true,
@@ -103,6 +105,7 @@ export async function POST(request: NextRequest) {
         xp,
         activityType,
         language: 'french',
+        languageCode: 'fr',
         timestamp: new Date().toISOString()
       }
     });
