@@ -3,9 +3,12 @@
  * Uses duolingo_activity table which stores daily progress data per language
  */
 
-import { supabase } from '@/lib/supabase';
+import { supabaseServer } from '@/lib/supabaseServer';
 import type { ChartDataPoint, TimePeriod } from '@/types/xpChart';
 import type { DashboardData, Activity, TimeStats, StreakData, Language, LanguageStats } from '@/types/dashboard';
+
+// Use server client that bypasses RLS
+const supabase = supabaseServer;
 
 // Fixed user ID as per requirements
 export const TARGET_USER_ID = 'f484bfe8-2771-4e0f-b765-830fbdb3c74e';
