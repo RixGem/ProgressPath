@@ -4,16 +4,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import type { ChartDataPoint, TimePeriod } from '@/types/xpChart';
-import { getDataForPeriod, processXPData } from '@/utils/xpChartData';
+import type { TimePeriod } from '@/types/xpChart';
+import { getDailyXP } from '@/lib/db/queries';
 
 /**
  * GET handler for XP data
- * Query parameters:
- *   - userId: string (optional) - User ID to fetch data for
- *   - period: TimePeriod (optional) - Time period for data aggregation
- *   - startDate: string (optional) - Start date for custom range (ISO format)
- *   - endDate: string (optional) - End date for custom range (ISO format)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -33,33 +28,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // TODO: Implement authentication check
-    // const session = await getSession(request);
-    // if (!session) {
-    //   return NextResponse.json(
-    //     { error: 'Unauthorized' },
-    //     { status: 401 }
-    //   );
-    // }
-
-    // TODO: Fetch real data from database
-    // For now, return mock data
-    const rawData = getDataForPeriod(period);
-    
-    // Apply date range filter if provided
-    let filteredData = rawData;
-    if (startDate || endDate) {
-      const start = startDate ? new Date(startDate).getTime() : 0;
-      const end = endDate ? new Date(endDate).getTime() : Date.now();
-      
-      filteredData = rawData.filter(point => {
-        const timestamp = point.timestamp || new Date(point.date).getTime();
-        return timestamp >= start && timestamp <= end;
-      });
-    }
-
-    // Process data
-    const processedData = processXPData(filteredData, period);
+    // Fetch real data from database
+    const processedData = {
+      data: await getDailyXP(period),
+      summary: {} // Add summary if needed
+    };
 
     // Return response
     return NextResponse.json({
@@ -76,7 +49,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching XP data:', error);
-    
+
     return NextResponse.json(
       {
         error: 'Internal server error',

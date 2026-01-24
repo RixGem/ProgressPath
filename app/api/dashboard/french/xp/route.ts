@@ -5,7 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import type { TimePeriod } from '@/types/xpChart';
-import { fetchDashboardData } from '@/lib/db/queries';
+import { getDailyXP, getStreakInfo, getActivityBreakdown } from '@/lib/db/queries';
+import { getXPStats } from '@/utils/xpCalculations';
 
 /**
  * GET handler for French XP data
@@ -25,23 +26,35 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // TODO: Implement authentication check
-    // const session = await getSession(request);
-    // if (!session) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
-
     // Fetch French-specific dashboard data
-    const dashboardData = await fetchDashboardData(userId, 'french');
+    // Parallel fetch
+    const [chartData, streakData, activities] = await Promise.all([
+      getDailyXP(period, 'French'),
+      getStreakInfo('French'),
+      getActivityBreakdown('French')
+    ]);
+
+    // Calculate total XP for French
+    const totalXP = chartData.reduce((sum, point) => sum + point.xp, 0);
+    const xpStats = getXPStats(totalXP);
+
+    // Mock time stats for now or calculate if possible
+    const timeStats = {
+      totalMinutes: Math.round(totalXP / 10), // Approx 10 XP per minute
+      todayMinutes: 0,
+      weekMinutes: 0,
+      monthMinutes: 0,
+      averageDaily: 0
+    };
 
     return NextResponse.json({
       success: true,
       data: {
-        stats: dashboardData.xpStats,
-        chartData: dashboardData.chartData,
-        activities: dashboardData.recentActivities,
-        timeStats: dashboardData.timeStats,
-        streakData: dashboardData.streakData
+        stats: xpStats,
+        chartData,
+        activities,
+        timeStats,
+        streakData
       },
       metadata: {
         userId,
@@ -52,7 +65,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching French XP data:', error);
-    
+
     return NextResponse.json(
       {
         error: 'Internal server error',
@@ -100,7 +113,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error adding French XP data:', error);
-    
+
     return NextResponse.json(
       {
         error: 'Internal server error',

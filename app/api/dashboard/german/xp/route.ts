@@ -5,7 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import type { TimePeriod } from '@/types/xpChart';
-import { fetchDashboardData } from '@/lib/db/queries';
+import { getDailyXP, getStreakInfo, getActivityBreakdown } from '@/lib/db/queries';
+import { getXPStats } from '@/utils/xpCalculations';
 
 /**
  * GET handler for German XP data
@@ -25,23 +26,33 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // TODO: Implement authentication check
-    // const session = await getSession(request);
-    // if (!session) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
-
     // Fetch German-specific dashboard data
-    const dashboardData = await fetchDashboardData(userId, 'german');
+    const [chartData, streakData, activities] = await Promise.all([
+      getDailyXP(period, 'German'),
+      getStreakInfo('German'),
+      getActivityBreakdown('German')
+    ]);
+
+    // Calculate total XP for German
+    const totalXP = chartData.reduce((sum, point) => sum + point.xp, 0);
+    const xpStats = getXPStats(totalXP);
+
+    const timeStats = {
+      totalMinutes: Math.round(totalXP / 10),
+      todayMinutes: 0,
+      weekMinutes: 0,
+      monthMinutes: 0,
+      averageDaily: 0
+    };
 
     return NextResponse.json({
       success: true,
       data: {
-        stats: dashboardData.xpStats,
-        chartData: dashboardData.chartData,
-        activities: dashboardData.recentActivities,
-        timeStats: dashboardData.timeStats,
-        streakData: dashboardData.streakData
+        stats: xpStats,
+        chartData,
+        activities,
+        timeStats,
+        streakData
       },
       metadata: {
         userId,
@@ -52,7 +63,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching German XP data:', error);
-    
+
     return NextResponse.json(
       {
         error: 'Internal server error',
@@ -100,7 +111,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error adding German XP data:', error);
-    
+
     return NextResponse.json(
       {
         error: 'Internal server error',
