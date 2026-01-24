@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import type { TimePeriod } from '@/types/xpChart';
-import { getDailyXP, getStreakInfo, getActivityBreakdown } from '@/lib/db/queries';
+import { getDailyXP, getStreakInfo, getActivityBreakdown, TARGET_USER_ID } from '@/lib/db/queries';
 import { getXPStats } from '@/utils/xpCalculations';
 
 /**
@@ -14,7 +14,8 @@ import { getXPStats } from '@/utils/xpCalculations';
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get('userId') || 'default-user';
+    // Always use TARGET_USER_ID to match database records
+    const userId = TARGET_USER_ID;
     const period = (searchParams.get('period') as TimePeriod) || 'weekly';
 
     // Validate period

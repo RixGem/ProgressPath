@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import type { ChartDataPoint, TimePeriod } from '@/types/xpChart';
-import { getDailyXP } from '@/lib/db/queries';
+import { getDailyXP, TARGET_USER_ID } from '@/lib/db/queries';
 
 /**
  * GET handler for XP data
@@ -14,7 +14,8 @@ export async function GET(request: NextRequest) {
   try {
     // Extract query parameters
     const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get('userId');
+    // Always use TARGET_USER_ID to match database records
+    const userId = TARGET_USER_ID;
     const period = (searchParams.get('period') as TimePeriod) || 'weekly';
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch real data from database
     const processedData = {
-      data: await getDailyXP(userId || 'default-user', period),
+      data: await getDailyXP(userId, period),
       summary: {} // Add summary if needed
     };
 
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error adding XP data:', error);
-    
+
     return NextResponse.json(
       {
         error: 'Internal server error',

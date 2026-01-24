@@ -13,8 +13,6 @@ import TimeChart from '@/components/TimeChart';
 import ViewModeToggle from '@/components/ViewModeToggle';
 import { useViewMode } from '@/hooks/useViewMode';
 import styles from './dashboard.module.css';
-import { getDailyXP, getStreakInfo, getActivityBreakdown, getLanguageSummary } from '@/lib/db/queries';
-import { getXPStats } from '@/utils/xpCalculations';
 import type { DashboardData, LanguageStats, StreakData, Activity, TimeStats } from '@/types/dashboard';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -41,38 +39,27 @@ export default function DashboardPage() {
       setLoading(true);
       setError(null);
 
-      const userId = user.id;
+      // Fetch data from API endpoint instead of direct database calls
+      const response = await fetch('/api/dashboard/overview?period=weekly');
 
-      // Fetch all data in parallel using the dynamic userId
-      const [dailyXP, streakInfo, activities, languages] = await Promise.all([
-        getDailyXP(userId, 'weekly'),
-        getStreakInfo(userId),
-        getActivityBreakdown(userId),
-        getLanguageSummary(userId)
-      ]);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch dashboard data: ${response.statusText}`);
+      }
 
-      // Calculate aggregated stats
-      const totalXP = languages.reduce((sum, lang) => sum + lang.totalXP, 0);
-      const xpStats = getXPStats(totalXP);
+      const result = await response.json();
 
-      // Calculate time stats (estimate based on language summary)
-      const totalMinutes = languages.reduce((sum, lang) => sum + lang.timeSpent, 0);
-      const timeStats: TimeStats = {
-        totalMinutes,
-        todayMinutes: 0, // Would need daily breakdown for this
-        weekMinutes: 0, // Would need weekly breakdown
-        monthMinutes: 0,
-        averageDaily: Math.round(totalMinutes / (streakInfo.currentStreak || 1))
-      };
-
-      setData({
-        xpStats,
-        chartData: dailyXP,
-        streakData: streakInfo,
-        recentActivities: activities,
-        languageStats: languages,
-        timeStats
-      });
+      if (result.success) {
+        setData({
+          xpStats: result.data.xpStats,
+          chartData: result.data.chartData,
+          streakData: result.data.streakData,
+          recentActivities: result.data.recentActivities,
+          languageStats: result.data.languageStats,
+          timeStats: result.data.timeStats
+        });
+      } else {
+        throw new Error(result.error || 'Unknown error occurred');
+      }
 
     } catch (err) {
       console.error(err);
@@ -184,7 +171,7 @@ export default function DashboardPage() {
                 <div className={styles.languageHeader}>
                   <span className={styles.languageFlag}>
                     {lang.language.toLowerCase().includes('french') ? '🇫🇷' :
-                     lang.language.toLowerCase().includes('german') ? '🇩🇪' : '🏳️'}
+                      lang.language.toLowerCase().includes('german') ? '🇩🇪' : '🏳️'}
                   </span>
                   <h3 className={styles.languageName}>{lang.displayName}</h3>
                 </div>
@@ -241,8 +228,8 @@ export default function DashboardPage() {
                 <div key={activity.id} className={styles.activityItem}>
                   <span className={styles.activityIcon}>
                     {activity.type === 'lesson' ? '📚' :
-                     activity.type === 'practice' ? '✍️' :
-                     activity.type === 'review' ? '🔄' : '🏆'}
+                      activity.type === 'practice' ? '✍️' :
+                        activity.type === 'review' ? '🔄' : '🏆'}
                   </span>
                   <div className={styles.activityContent}>
                     <div className={styles.activityTitle}>{activity.title}</div>

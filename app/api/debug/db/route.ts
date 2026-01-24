@@ -1,46 +1,64 @@
+/**
+ * Debug API route to test database connection and query
+ */
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseServer, createServerSupabaseClient } from '@/lib/supabaseServer';
 import { TARGET_USER_ID } from '@/lib/db/queries';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    // List all tables - using information_schema
-    const { data: tables, error: tablesError } = await supabase
-      .rpc('get_tables');
+    // Check if supabaseServer is initialized
+    const serverClientStatus = {
+      supabaseServer: supabaseServer ? 'initialized' : 'null',
+      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      hasServiceKeyAlt: !!process.env.SUPABASE_SERVICE_KEY,
+    };
 
-    // Check duolingo_activity with no user filter
-    const { data: activityData, error: activityError } = await supabase
-      .from('duolingo_activity')
-      .select('*')
-      .limit(10);
+    // Try to create a fresh client
+    const freshClient = createServerSupabaseClient();
 
-    // Try to get table columns from the first record
-    let columns: string[] = [];
-    if (activityData && activityData.length > 0) {
-      columns = Object.keys(activityData[0]);
+    if (!freshClient) {
+      return NextResponse.json({
+        error: 'Could not create Supabase server client',
+        serverClientStatus,
+        targetUserId: TARGET_USER_ID
+      }, { status: 500 });
     }
 
-    // Check if maybe user_id column has different name
-    const { data: allRecords, error: allError } = await supabase
+    // Query with fresh client
+    const { data, error } = await freshClient
       .from('duolingo_activity')
-      .select('*');
+      .select('*')
+      .eq('user_id', TARGET_USER_ID)
+      .limit(5);
+
+    // Also try without user filter
+    const { data: allData, error: allError } = await freshClient
+      .from('duolingo_activity')
+      .select('*')
+      .limit(5);
 
     return NextResponse.json({
+      serverClientStatus,
       targetUserId: TARGET_USER_ID,
-      tablesCheck: {
-        error: tablesError?.message,
-        tables: tables
+      withUserFilter: {
+        error: error?.message,
+        count: data?.length || 0,
+        data: data
       },
-      duolingo_activity: {
-        error: activityError?.message,
-        totalRecords: allRecords?.length || 0,
-        sampleData: activityData,
-        columns: columns,
-        // Check for different user ID fields
-        uniqueUserIds: allRecords ? Array.from(new Set(allRecords.map((r: any) => r.user_id || r.userId || 'no_user_field'))) : []
+      withoutUserFilter: {
+        error: allError?.message,
+        count: allData?.length || 0,
+        data: allData
       }
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({
+      error: err.message,
+      stack: err.stack
+    }, { status: 500 });
   }
 }
