@@ -1,0 +1,161 @@
+.container {
+  background: var(--card-background);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--card-shadow);
+}
+
+.header {
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.25rem 0;
+}
+
+.subtitle {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.heatmap {
+  margin-bottom: 1rem;
+}
+
+.weekLabels {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.day {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.day:hover {
+  transform: scale(1.1);
+  opacity: 0.8;
+}
+
+.dayTooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--tooltip-background);
+  color: var(--tooltip-text);
+  padding: 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 10;
+  margin-bottom: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.day:hover .dayTooltip {
+  opacity: 1;
+}
+
+/* Heat levels */
+.heat0 {
+  background: var(--heat-0, #ebedf0);
+}
+
+.heat1 {
+  background: var(--heat-1, #c6e48b);
+}
+
+.heat2 {
+  background: var(--heat-2, #7bc96f);
+}
+
+.heat3 {
+  background: var(--heat-3, #239a3b);
+}
+
+.heat4 {
+  background: var(--heat-4, #196127);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 1rem;
+}
+
+.legendLabel {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.legendItem {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+/* Dark mode */
+:global(.dark) .heat0 {
+  background: #161b22;
+}
+
+:global(.dark) .heat1 {
+  background: #0e4429;
+}
+
+:global(.dark) .heat2 {
+  background: #006d32;
+}
+
+:global(.dark) .heat3 {
+  background: #26a641;
+}
+
+:global(.dark) .heat4 {
+  background: #39d353;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .weekLabels span {
+    font-size: 0.625rem;
+  }
+
+  .day {
+    min-width: 8px;
+  }
+}

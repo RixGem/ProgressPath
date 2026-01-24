@@ -1,26 +1,24 @@
 /**
  * French Dashboard Page
- * French-specific progress tracking
+ * Comprehensive French learning progress tracking with new features
  */
 
 'use client';
 
 import React from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import XPStatsCard from '@/components/XPStatsCard';
+import StatusCard from '@/components/StatusCard';
+import ActivityHeatMap from '@/components/ActivityHeatMap';
+import VocabularyProgress from '@/components/VocabularyProgress';
 import XPChart from '@/components/XPChart';
-import TimeChart from '@/components/TimeChart';
 import ViewModeToggle from '@/components/ViewModeToggle';
 import { useViewMode } from '@/hooks/useViewMode';
-import { useDashboardData } from '@/hooks/useDashboardData';
+import { useLanguageDashboard } from '@/hooks/useLanguageDashboard';
 import styles from '../dashboard.module.css';
 
 export default function FrenchDashboardPage() {
   const { viewMode, setViewMode } = useViewMode('grid');
-  const { data, loading, error, refetch } = useDashboardData({
-    language: 'french',
-    autoRefresh: false
-  });
+  const { data, loading, error, refetch } = useLanguageDashboard('french');
 
   if (loading) {
     return (
@@ -28,6 +26,7 @@ export default function FrenchDashboardPage() {
         <div className={styles.loading}>
           <div className={styles.spinner} />
           <p>Loading your French dashboard...</p>
+          <p className={styles.loadingSubtext}>Fetching real data from Duolingo</p>
         </div>
       </DashboardLayout>
     );
@@ -38,14 +37,35 @@ export default function FrenchDashboardPage() {
       <DashboardLayout language="french">
         <div className={styles.error}>
           <p className={styles.errorIcon}>⚠️</p>
+          <h2 className={styles.errorTitle}>Failed to Load Dashboard</h2>
           <p className={styles.errorMessage}>{error}</p>
+          <p className={styles.errorHint}>Please check your internet connection or try again later.</p>
           <button className={styles.retryButton} onClick={refetch}>
-            Retry
+            🔄 Retry
           </button>
         </div>
       </DashboardLayout>
     );
   }
+
+  if (!data) {
+    return (
+      <DashboardLayout language="french">
+        <div className={styles.noData}>
+          <p className={styles.noDataIcon}>📚</p>
+          <h2 className={styles.noDataText}>No French data available yet</h2>
+          <p className={styles.noDataHint}>Start learning French on Duolingo to see your progress here!</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Format time investment
+  const formatTime = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  };
 
   return (
     <DashboardLayout language="french">
@@ -54,7 +74,7 @@ export default function FrenchDashboardPage() {
         <div className={styles.header}>
           <div>
             <h1 className={styles.title}>🇫🇷 French Dashboard</h1>
-            <p className={styles.subtitle}>Track your French learning progress</p>
+            <p className={styles.subtitle}>Comprehensive French learning progress and analytics</p>
           </div>
           
           <div className={styles.headerActions}>
@@ -70,102 +90,140 @@ export default function FrenchDashboardPage() {
           </div>
         </div>
 
-        {/* Quick Stats */}
-        <div className={`${styles.statsGrid} ${styles[viewMode]}`}>
-          {data && (
-            <XPStatsCard
-              stats={data.xpStats}
-              showDetails={true}
-              animated={true}
+        {/* Status Cards - 4 Column Grid */}
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>📊 Quick Stats</h2>
+          <div className={`${styles.statusGrid} ${styles[viewMode]}`}>
+            <StatusCard
+              icon="🎯"
+              label="Level Progress"
+              value={`Level ${data.level}`}
+              subValue={`Virtual: ${data.virtualLevel}`}
             />
-          )}
-
-          {/* Streak Card */}
-          {data?.streakData && (
-            <div className={styles.streakCard}>
-              <div className={styles.streakHeader}>
-                <span className={styles.streakIcon}>🔥</span>
-                <h3 className={styles.streakTitle}>French Streak</h3>
-              </div>
-              <div className={styles.streakValue}>{data.streakData.currentStreak}</div>
-              <div className={styles.streakLabel}>days in a row</div>
-              <div className={styles.streakProgress}>
-                <div className={styles.streakProgressBar}>
-                  <div
-                    className={styles.streakProgressFill}
-                    style={{
-                      width: `${(data.streakData.currentStreak / data.streakData.streakGoal) * 100}%`
-                    }}
-                  />
-                </div>
-                <div className={styles.streakGoal}>
-                  Goal: {data.streakData.streakGoal} days
-                </div>
-              </div>
-            </div>
-          )}
+            <StatusCard
+              icon="✅"
+              label="Completion Rate"
+              value={`${data.completionRate.toFixed(1)}%`}
+              subValue={`${data.activeSkillsCount} active skills`}
+            />
+            <StatusCard
+              icon="🔥"
+              label="Current Streak"
+              value={data.streakCount}
+              subValue="days in a row"
+            />
+            <StatusCard
+              icon="⭐"
+              label="Total XP"
+              value={data.totalXp.toLocaleString()}
+              subValue={`${data.estimatedHours.toFixed(1)} estimated hours`}
+            />
+          </div>
         </div>
 
-        {/* Charts Section */}
+        {/* Time Investment Section */}
         <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>📈 French Progress</h2>
+          <h2 className={styles.sectionTitle}>⏰ Time Investment</h2>
+          <div className={styles.timeInvestment}>
+            <div className={styles.timeCard}>
+              <div className={styles.timeIcon}>🕐</div>
+              <div className={styles.timeContent}>
+                <div className={styles.timeValue}>{data.estimatedHours.toFixed(1)} hrs</div>
+                <div className={styles.timeLabel}>Estimated Total Learning Time</div>
+              </div>
+            </div>
+            <div className={styles.timeCard}>
+              <div className={styles.timeIcon}>📈</div>
+              <div className={styles.timeContent}>
+                <div className={styles.timeValue}>{formatTime(data.timeSpentMinutes)}</div>
+                <div className={styles.timeLabel}>Actual Time Tracked (Last 30 Days)</div>
+              </div>
+            </div>
+            <div className={styles.timeCard}>
+              <div className={styles.timeIcon}>⚡</div>
+              <div className={styles.timeContent}>
+                <div className={styles.timeValue}>
+                  {data.recentActivityHeat.length > 0 
+                    ? Math.round(data.timeSpentMinutes / data.recentActivityHeat.filter(d => d.xpGained > 0).length)
+                    : 0} min
+                </div>
+                <div className={styles.timeLabel}>Average Session Length</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Activity Heat Map */}
+        <div className={styles.section}>
+          <ActivityHeatMap data={data.recentActivityHeat} days={30} />
+        </div>
+
+        {/* XP Progress Charts */}
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>📈 XP Progress</h2>
           <div className={styles.chartsGrid}>
-            {data && (
+            <div className={styles.chartCard}>
+              <h3 className={styles.chartTitle}>Daily XP Trends</h3>
               <XPChart
                 userId="default"
                 goalXP={400}
                 initialConfig={{ period: 'weekly', type: 'bar' }}
               />
-            )}
-            {data?.timeStats && <TimeChart timeStats={data.timeStats} />}
+            </div>
+            <div className={styles.xpSummary}>
+              <h3 className={styles.chartTitle}>XP Summary</h3>
+              <div className={styles.xpStats}>
+                <div className={styles.xpStat}>
+                  <span className={styles.xpStatLabel}>Total XP:</span>
+                  <span className={styles.xpStatValue}>{data.totalXp.toLocaleString()}</span>
+                </div>
+                <div className={styles.xpStat}>
+                  <span className={styles.xpStatLabel}>Recent Gain (30d):</span>
+                  <span className={styles.xpStatValue}>
+                    +{data.xpData.reduce((sum, item) => sum + item.xpGained, 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className={styles.xpStat}>
+                  <span className={styles.xpStatLabel}>Daily Average:</span>
+                  <span className={styles.xpStatValue}>
+                    {data.xpData.length > 0
+                      ? Math.round(data.xpData.reduce((sum, item) => sum + item.xpGained, 0) / data.xpData.length)
+                      : 0} XP
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Vocabulary Stats */}
+        {/* Vocabulary Progress */}
         <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>💬 Vocabulary</h2>
-          <div className={styles.statsGrid}>
-            <div className={styles.statCard}>
-              <div className={styles.statIcon}>🔤</div>
-              <div className={styles.statInfo}>
-                <div className={styles.statValue}>437</div>
-                <div className={styles.statLabel}>Words Learned</div>
-              </div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statIcon}>✔️</div>
-              <div className={styles.statInfo}>
-                <div className={styles.statValue}>89%</div>
-                <div className={styles.statLabel}>Accuracy</div>
-              </div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statIcon}>📊</div>
-              <div className={styles.statInfo}>
-                <div className={styles.statValue}>12</div>
-                <div className={styles.statLabel}>Mastered Topics</div>
-              </div>
-            </div>
-          </div>
+          <VocabularyProgress 
+            totalWords={data.wordsLearned} 
+            trends={data.vocabularyTrends}
+          />
         </div>
 
         {/* Recent Activities */}
-        {data?.recentActivities && data.recentActivities.length > 0 && (
+        {data.recentActivities && data.recentActivities.length > 0 && (
           <div className={styles.section}>
             <h2 className={styles.sectionTitle}>🕒 Recent Activities</h2>
             <div className={styles.activitiesList}>
-              {data.recentActivities.slice(0, 8).map((activity) => (
+              {data.recentActivities.map((activity) => (
                 <div key={activity.id} className={styles.activityItem}>
-                  <span className={styles.activityIcon}>
-                    {activity.type === 'lesson' && '📚'}
-                    {activity.type === 'practice' && '✍️'}
-                    {activity.type === 'review' && '🔄'}
-                    {activity.type === 'achievement' && '🏆'}
-                  </span>
+                  <span className={styles.activityIcon}>📚</span>
                   <div className={styles.activityContent}>
-                    <div className={styles.activityTitle}>{activity.title}</div>
-                    <div className={styles.activityTime}>
-                      {new Date(activity.timestamp).toLocaleString()}
+                    <div className={styles.activityTitle}>
+                      {activity.lessonsCompleted} lesson{activity.lessonsCompleted !== 1 ? 's' : ''} completed
+                    </div>
+                    <div className={styles.activityDescription}>
+                      {new Date(activity.date).toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                      {activity.timeSpentMinutes > 0 && ` • ${formatTime(activity.timeSpentMinutes)}`}
                     </div>
                   </div>
                   <div className={styles.activityXP}>+{activity.xpGained} XP</div>
@@ -192,6 +250,11 @@ export default function FrenchDashboardPage() {
               <span className={styles.quickLinkText}>Review Lessons</span>
             </a>
           </div>
+        </div>
+
+        {/* Data Source Indicator */}
+        <div className={styles.dataSource}>
+          <span>📊 Real-time data from Duolingo • Last updated: {new Date().toLocaleTimeString()}</span>
         </div>
       </div>
     </DashboardLayout>
