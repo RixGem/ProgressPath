@@ -47,6 +47,20 @@ export default function Navigation() {
     }
   }, [openDropdown])
 
+  // Close dropdown on Escape key
+  useEffect(() => {
+    function handleEscapeKey(event) {
+      if (event.key === 'Escape' && openDropdown) {
+        setOpenDropdown(null)
+      }
+    }
+    
+    if (openDropdown) {
+      document.addEventListener('keydown', handleEscapeKey)
+      return () => document.removeEventListener('keydown', handleEscapeKey)
+    }
+  }, [openDropdown])
+
   // Don't show navigation on login page - MOVED AFTER ALL HOOKS
   if (pathname === '/login') {
     return null
@@ -65,7 +79,9 @@ export default function Navigation() {
     }
   }
 
-  const toggleDropdown = (dropdownName) => {
+  // Fixed: Stop event propagation to prevent conflicts with click-outside detection
+  const toggleDropdown = (dropdownName, event) => {
+    event.stopPropagation()
     setOpenDropdown(openDropdown === dropdownName ? null : dropdownName)
   }
 
@@ -136,26 +152,37 @@ export default function Navigation() {
     return (
       <div key={menuKey} className="relative" ref={dropdownRef}>
         <button
-          onClick={() => toggleDropdown(menuKey)}
+          onClick={(e) => toggleDropdown(menuKey, e)}
           className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg transition-colors duration-200 whitespace-nowrap ${
             isActive
               ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-medium'
               : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
           }`}
           title={menu.label}
+          aria-expanded={isOpen}
+          aria-haspopup="true"
+          aria-label={`${menu.label} menu`}
         >
           {menu.emoji ? (
-            <span className="text-lg">{menu.emoji}</span>
+            <span className="text-lg" aria-hidden="true">{menu.emoji}</span>
           ) : (
-            <menu.icon className="w-5 h-5" />
+            <menu.icon className="w-5 h-5" aria-hidden="true" />
           )}
           <span className="hidden sm:inline text-sm md:text-base">{menu.label}</span>
-          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown 
+            className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          />
         </button>
 
-        {/* Dropdown Menu */}
+        {/* Dropdown Menu with improved transitions */}
         {isOpen && (
-          <div className="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
+          <div 
+            className="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50 animate-dropdown"
+            role="menu"
+            aria-label={`${menu.label} submenu`}
+            onClick={(e) => e.stopPropagation()}
+          >
             {menu.items.map((item) => {
               const ItemIcon = item.icon
               const isItemActive = pathname === item.href
@@ -163,20 +190,25 @@ export default function Navigation() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => setOpenDropdown(null)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setOpenDropdown(null)
+                  }}
                   className={`flex items-center space-x-3 px-4 py-2 transition-colors duration-150 ${
                     isItemActive
                       ? 'bg-primary-50 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 font-medium'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
+                  role="menuitem"
+                  aria-current={isItemActive ? 'page' : undefined}
                 >
                   {item.emoji ? (
-                    <span className="text-lg">{item.emoji}</span>
+                    <span className="text-lg" aria-hidden="true">{item.emoji}</span>
                   ) : (
-                    <ItemIcon className="w-4 h-4" />
+                    <ItemIcon className="w-4 h-4" aria-hidden="true" />
                   )}
                   <span className="text-sm">{item.label}</span>
-                  {isItemActive && <span className="ml-auto text-primary-600 dark:text-primary-400">✓</span>}
+                  {isItemActive && <span className="ml-auto text-primary-600 dark:text-primary-400" aria-label="Current page">✓</span>}
                 </Link>
               )
             })}
@@ -187,13 +219,13 @@ export default function Navigation() {
   }
 
   return (
-    <nav className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-50 transition-colors duration-200">
+    <nav className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-50 transition-colors duration-200" role="navigation">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Brand Logo and Title - Mobile Responsive */}
           <Link href="/" className="flex items-center space-x-2 flex-shrink-0 min-w-0">
             <div className="w-8 h-8 bg-primary-600 dark:bg-primary-500 rounded-lg flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-xl">✦</span>
+              <span className="text-white font-bold text-xl" aria-hidden="true">✦</span>
             </div>
             {/* Full text on larger screens */}
             <span className="hidden md:inline text-xl font-bold text-gray-900 dark:text-white whitespace-nowrap">
@@ -222,8 +254,9 @@ export default function Navigation() {
                         : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
                     }`}
                     title={item.label}
+                    aria-current={isActive ? 'page' : undefined}
                   >
-                    <Icon className="w-5 h-5" />
+                    <Icon className="w-5 h-5" aria-hidden="true" />
                     <span className="hidden sm:inline text-sm md:text-base">{item.label}</span>
                   </Link>
                 )
@@ -245,8 +278,9 @@ export default function Navigation() {
                 disabled={isLoggingOut}
                 className="flex items-center space-x-2 px-2 sm:px-4 py-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                 title="Sign out"
+                aria-label="Sign out"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-4 h-4" aria-hidden="true" />
                 <span className="font-medium hidden sm:inline text-sm md:text-base">
                   {isLoggingOut ? 'Logging out...' : 'Logout'}
                 </span>
@@ -256,7 +290,7 @@ export default function Navigation() {
         </div>
       </div>
 
-      {/* Mobile: Add scrollbar hide utility */}
+      {/* Styles for scrollbar hide and dropdown animation */}
       <style jsx>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
@@ -264,6 +298,19 @@ export default function Navigation() {
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
+        }
+        @keyframes dropdown-enter {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-dropdown {
+          animation: dropdown-enter 0.15s ease-out;
         }
       `}</style>
     </nav>
