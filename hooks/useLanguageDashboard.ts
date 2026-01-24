@@ -96,8 +96,8 @@ export function useLanguageDashboard(language: string): UseLanguageDashboardResu
         streakCount: xpData.summary?.streakCount || 0,
         totalXp: virtualLevelData.data?.totalXp || 0,
         estimatedHours: virtualLevelData.data?.estimatedHours || 0,
-        timeSpentMinutes: heatmapData.summary?.totalTimeSpent || 0,
-        recentActivityHeat: heatmapData.data || [],
+        timeSpentMinutes: heatmapData.data?.summary?.totalMinutes || 0,
+        recentActivityHeat: heatmapData.data?.heatmap || [],
         xpData: xpData.data || [],
         wordsLearned: xpData.summary?.wordsLearned || 0,
         vocabularyTrends: xpData.data?.map((item: any) => ({
