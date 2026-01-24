@@ -280,18 +280,11 @@ export default function FrenchPage() {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">French Learning</h1>
             <p className="text-gray-600 dark:text-gray-300 mt-2">Track your daily learning activities and progress</p>
           </div>
-            <button
-            onClick={() => setShowFlashcards(true)}
-            className="btn-secondary flex items-center space-x-2 mr-2"
-          >
-            <GalleryHorizontal className="w-5 h-5" />
-            <span>Review Cards</span>
-          </button>
           <button
             onClick={() => setShowForm(!showForm)}
             className="btn-primary flex items-center space-x-2"
           >
-            {showForm ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+            <Plus className="w-5 h-5" />
             <span>{showForm ? 'Cancel' : 'Log Activity'}</span>
           </button>
         </div>
@@ -446,10 +439,21 @@ export default function FrenchPage() {
 
         {/* Activities List */}
         <div className="card p-6 dark:border dark:border-gray-700">
-          <h2 className="text-xl font-semibold mb-4 flex items-center space-x-2 text-gray-900 dark:text-white">
-            <Calendar className="w-5 h-5" />
-            <span>Recent Activities</span>
-          </h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold flex items-center space-x-2 text-gray-900 dark:text-white">
+              <Calendar className="w-5 h-5" />
+              <span>Recent Activities</span>
+            </h2>
+            {activities.length > 0 && (
+              <button
+                onClick={() => setShowFlashcards(true)}
+                className="btn-secondary flex items-center space-x-2"
+              >
+                <GalleryHorizontal className="w-4 h-4" />
+                <span>Review Cards</span>
+              </button>
+            )}
+          </div>
           {activities.length === 0 ? (
             <div className="text-center py-12">
               <Languages className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />

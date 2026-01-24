@@ -163,8 +163,8 @@ export default function Navigation() {
             </span>
           </Link>
 
-          {/* Navigation Items and Actions - Scrollable on mobile */}
-          <div className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto scrollbar-hide">
+          {/* Navigation Items and Actions - Scrollable on mobile, visible overflow on desktop */}
+          <div className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto md:overflow-visible scrollbar-hide">
             <div className="flex space-x-1 flex-nowrap">
               {/* Simple nav items */}
               {simpleNavItems.map((item) => {
