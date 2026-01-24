@@ -16,6 +16,19 @@ import styles from './dashboard.module.css';
 import type { DashboardData, LanguageStats, StreakData, Activity, TimeStats } from '@/types/dashboard';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Flag mapping for language codes
+const FLAG_MAP: Record<string, string> = {
+  'fr': '🇫🇷',
+  'de': '🇩🇪',
+  'es': '🇪🇸',
+  'it': '🇮🇹',
+  'pt': '🇵🇹',
+  'nl': '🇳🇱',
+  'ja': '🇯🇵',
+  'ko': '🇰🇷',
+  'zh': '🇨🇳'
+};
+
 export default function DashboardPage() {
   const { viewMode, setViewMode } = useViewMode('grid');
   // Explicitly typecast user to any since AuthContext is JS
@@ -170,8 +183,7 @@ export default function DashboardPage() {
               >
                 <div className={styles.languageHeader}>
                   <span className={styles.languageFlag}>
-                    {lang.language.toLowerCase().includes('french') ? '🇫🇷' :
-                      lang.language.toLowerCase().includes('german') ? '🇩🇪' : '🏳️'}
+                    {FLAG_MAP[lang.language] || '🏳️'}
                   </span>
                   <h3 className={styles.languageName}>{lang.displayName}</h3>
                 </div>
