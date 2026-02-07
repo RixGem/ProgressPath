@@ -1,29 +1,23 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { Languages, Plus, Calendar, TrendingUp, X, BookOpen, MessageSquare, Smile, Flame, GalleryHorizontal, FileText as FileTextIcon } from 'lucide-react'
+import { TrendingUp, BookOpen, MessageSquare, Flame, Calendar, Plus, GalleryHorizontal, FileText as FileTextIcon } from 'lucide-react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import FlashcardNotes from '../../components/FlashcardNotes'
 import { useAuth } from '../../contexts/AuthContext'
+import { FrenchActivity, FrenchStats } from '../../types/french'
+import ActivityForm from '../../components/french/ActivityForm'
+import ActivityList from '../../components/french/ActivityList'
 
 export default function FrenchPage() {
   const { user } = useAuth()
-  const [activities, setActivities] = useState([])
+  const [activities, setActivities] = useState<FrenchActivity[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [totalTime, setTotalTime] = useState(0)
   const [currentStreak, setCurrentStreak] = useState(0)
   const [showFlashcards, setShowFlashcards] = useState(false)
-  const [formData, setFormData] = useState({
-    activity_type: 'vocabulary',
-    duration_minutes: '',
-    notes: '',
-    date: new Date().toISOString().split('T')[0],
-    new_vocabulary: '',
-    practice_sentences: '',
-    mood: 'neutral'
-  })
 
   useEffect(() => {
     if (user) {
@@ -36,53 +30,25 @@ export default function FrenchPage() {
    * Helper function to normalize vocabulary data
    * Handles both array and string formats
    */
-  function normalizeVocabulary(vocabulary) {
+  function normalizeVocabulary(vocabulary: string[] | string | null): string[] {
     if (!vocabulary) return []
-
-    // If already an array, return it
-    if (Array.isArray(vocabulary)) {
-      return vocabulary
-    }
-
-    // If it's a string, try to parse it
+    if (Array.isArray(vocabulary)) return vocabulary
     if (typeof vocabulary === 'string') {
-      // Check if it's in Chinese summary format (e.g., "8个新词汇，15个复习词汇")
-      if (vocabulary.includes('个新词汇') || vocabulary.includes('个复习词汇')) {
-        // This is a summary format without actual vocabulary
-        // Return empty array as we don't have the actual words
-        return []
-      }
-
-      // Otherwise, split by comma and clean up
-      return vocabulary
-        .split(',')
-        .map(v => v.trim())
-        .filter(v => v.length > 0)
+      if (vocabulary.includes('个新词汇') || vocabulary.includes('个复习词汇')) return []
+      return vocabulary.split(',').map(v => v.trim()).filter(v => v.length > 0)
     }
-
     return []
   }
 
   /**
    * Helper function to normalize practice sentences
-   * Handles both array and string formats
    */
-  function normalizeSentences(sentences) {
+  function normalizeSentences(sentences: string[] | string | null): string[] {
     if (!sentences) return []
-
-    // If already an array, return it
-    if (Array.isArray(sentences)) {
-      return sentences
-    }
-
-    // If it's a string, split by comma
+    if (Array.isArray(sentences)) return sentences
     if (typeof sentences === 'string') {
-      return sentences
-        .split(',')
-        .map(s => s.trim())
-        .filter(s => s.length > 0)
+      return sentences.split(',').map(s => s.trim()).filter(s => s.length > 0)
     }
-
     return []
   }
 
@@ -96,10 +62,13 @@ export default function FrenchPage() {
         .limit(30)
 
       if (error) throw error
-      setActivities(data || [])
 
-      if (data && data.length > 0) {
-        calculateStreak(data)
+      // Cast the data to the correct type
+      const typedData = (data || []) as FrenchActivity[]
+      setActivities(typedData)
+
+      if (typedData.length > 0) {
+        calculateStreak(typedData)
       }
     } catch (error) {
       console.error('Error fetching activities:', error)
@@ -108,14 +77,14 @@ export default function FrenchPage() {
     }
   }
 
-  function calculateStreak(activitiesData) {
+  function calculateStreak(activitiesData: FrenchActivity[]) {
     if (!activitiesData || activitiesData.length === 0) {
       setCurrentStreak(0)
       return
     }
 
     const sortedActivities = [...activitiesData].sort((a, b) =>
-      new Date(b.date) - new Date(a.date)
+      new Date(b.date).getTime() - new Date(a.date).getTime()
     )
 
     let streak = 0
@@ -125,7 +94,7 @@ export default function FrenchPage() {
     const mostRecentActivity = new Date(sortedActivities[0].date)
     mostRecentActivity.setHours(0, 0, 0, 0)
 
-    const daysDifference = Math.floor((currentDate - mostRecentActivity) / (1000 * 60 * 60 * 24))
+    const daysDifference = Math.floor((currentDate.getTime() - mostRecentActivity.getTime()) / (1000 * 60 * 60 * 24))
 
     if (daysDifference > 1) {
       setCurrentStreak(0)
@@ -161,7 +130,7 @@ export default function FrenchPage() {
 
       if (error) throw error
 
-      const total = data.reduce((sum, record) => {
+      const total = (data || []).reduce((sum: number, record: any) => {
         const time = record.total_time !== undefined && record.total_time !== null
           ? record.total_time
           : record.duration_minutes
@@ -174,62 +143,7 @@ export default function FrenchPage() {
     }
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    try {
-      const durationMinutes = parseInt(formData.duration_minutes)
-
-      const vocabularyArray = formData.new_vocabulary
-        .split(',')
-        .map(v => v.trim())
-        .filter(v => v.length > 0)
-
-      const sentencesArray = formData.practice_sentences
-        .split(',')
-        .map(s => s.trim())
-        .filter(s => s.length > 0)
-
-      const insertData = {
-        activity_type: formData.activity_type,
-        duration_minutes: durationMinutes,
-        total_time: durationMinutes,
-        notes: formData.notes,
-        date: formData.date,
-        new_vocabulary: vocabularyArray.length > 0 ? vocabularyArray : null,
-        practice_sentences: sentencesArray.length > 0 ? sentencesArray : null,
-        mood: formData.mood,
-        user_id: user.id
-      }
-
-      const { error } = await supabase
-        .from('french_learning')
-        .insert([insertData])
-
-      if (error) throw error
-
-      resetForm()
-      fetchActivities()
-      fetchTotalTime()
-    } catch (error) {
-      console.error('Error saving activity:', error)
-      alert('Error saving activity: ' + error.message)
-    }
-  }
-
-  function resetForm() {
-    setFormData({
-      activity_type: 'vocabulary',
-      duration_minutes: '',
-      notes: '',
-      date: new Date().toISOString().split('T')[0],
-      new_vocabulary: '',
-      practice_sentences: '',
-      mood: 'neutral'
-    })
-    setShowForm(false)
-  }
-
-  function calculateStats() {
+  function calculateStats(): FrenchStats {
     const totalHours = (totalTime / 60).toFixed(1)
 
     const thisWeek = activities.filter(a => {
@@ -247,7 +161,7 @@ export default function FrenchPage() {
     return { totalHours, totalSessions: activities.length, thisWeek, totalVocabulary, currentStreak }
   }
 
-  function getMoodEmoji(mood) {
+  function getMoodEmoji(mood: string): string {
     switch (mood) {
       case 'good': return '😊'
       case 'neutral': return '😐'
@@ -256,7 +170,7 @@ export default function FrenchPage() {
     }
   }
 
-  function getMoodColor(mood) {
+  function getMoodColor(mood: string): string {
     switch (mood) {
       case 'good': return 'text-green-600 dark:text-green-400'
       case 'neutral': return 'text-yellow-600 dark:text-yellow-400'
@@ -334,232 +248,23 @@ export default function FrenchPage() {
 
         {/* Form */}
         {showForm && (
-          <div className="card p-6 dark:border dark:border-gray-700">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Log Learning Activity</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="label">Activity Type *</label>
-                  <select
-                    className="input-field"
-                    value={formData.activity_type}
-                    onChange={(e) => setFormData({ ...formData, activity_type: e.target.value })}
-                    required
-                  >
-                    <option value="vocabulary">Vocabulary</option>
-                    <option value="grammar">Grammar</option>
-                    <option value="reading">Reading</option>
-                    <option value="listening">Listening</option>
-                    <option value="speaking">Speaking</option>
-                    <option value="writing">Writing</option>
-                    <option value="exercise">Exercise</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="label">Duration (minutes) *</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    className="input-field"
-                    value={formData.duration_minutes}
-                    onChange={(e) => setFormData({ ...formData, duration_minutes: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="label">Date *</label>
-                  <input
-                    type="date"
-                    required
-                    className="input-field"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="label">How did it go? *</label>
-                  <select
-                    className="input-field"
-                    value={formData.mood}
-                    onChange={(e) => setFormData({ ...formData, mood: e.target.value })}
-                    required
-                  >
-                    <option value="good">😊 Good - Felt confident</option>
-                    <option value="neutral">😐 Neutral - Okay progress</option>
-                    <option value="difficult">😓 Difficult - Challenging</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="label">New Vocabulary</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Enter words separated by commas (e.g., bonjour, merci, au revoir)"
-                  value={formData.new_vocabulary}
-                  onChange={(e) => setFormData({ ...formData, new_vocabulary: e.target.value })}
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Separate multiple words with commas</p>
-              </div>
-
-              <div>
-                <label className="label">Practice Sentences</label>
-                <textarea
-                  className="input-field"
-                  rows="2"
-                  placeholder="Enter sentences separated by commas"
-                  value={formData.practice_sentences}
-                  onChange={(e) => setFormData({ ...formData, practice_sentences: e.target.value })}
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Separate multiple sentences with commas</p>
-              </div>
-
-              <div>
-                <label className="label">Notes</label>
-                <textarea
-                  className="input-field"
-                  rows="3"
-                  placeholder="What did you learn or practice today?"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                />
-              </div>
-
-              <div className="flex space-x-3">
-                <button type="submit" className="btn-primary">Log Activity</button>
-                <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
-              </div>
-            </form>
-          </div>
+          <ActivityForm
+            userId={user.id}
+            onSuccess={() => {
+              setShowForm(false)
+              fetchActivities()
+              fetchTotalTime()
+            }}
+            onCancel={() => setShowForm(false)}
+          />
         )}
 
         {/* Activities List */}
-        <div className="card p-6 dark:border dark:border-gray-700">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold flex items-center space-x-2 text-gray-900 dark:text-white">
-              <Calendar className="w-5 h-5" />
-              <span>Recent Activities</span>
-            </h2>
-            {activities.length > 0 && (
-              <button
-                onClick={() => setShowFlashcards(true)}
-                className="btn-secondary flex items-center space-x-2"
-              >
-                <GalleryHorizontal className="w-4 h-4" />
-                <span>Review Cards</span>
-              </button>
-            )}
-          </div>
-          {activities.length === 0 ? (
-            <div className="text-center py-12">
-              <Languages className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No activities yet</h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">Start logging your French learning activities</p>
-              <button onClick={() => setShowForm(true)} className="btn-primary">
-                Log Your First Activity
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {activities.map((activity) => {
-                const displayDuration = activity.total_time !== undefined && activity.total_time !== null
-                  ? activity.total_time
-                  : activity.duration_minutes
-
-                // Normalize vocabulary and sentences to handle both string and array formats
-                const normalizedVocabulary = normalizeVocabulary(activity.new_vocabulary)
-                const normalizedSentences = normalizeSentences(activity.practice_sentences)
-
-                return (
-                  <div key={activity.id} className="border-l-4 border-purple-500 dark:border-purple-400 pl-4 py-3 bg-gray-50 dark:bg-gray-700/50 rounded-r-lg">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <span className="font-semibold text-gray-900 dark:text-white capitalize">
-                            {activity.activity_type}
-                          </span>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
-                            {displayDuration} min
-                          </span>
-                          <span className="text-sm text-gray-400 dark:text-gray-500">
-                            {new Date(activity.date).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric'
-                            })}
-                          </span>
-                          {activity.mood && (
-                            <span className={`text-lg ${getMoodColor(activity.mood)}`} title={activity.mood}>
-                              {getMoodEmoji(activity.mood)}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Display vocabulary if available */}
-                        {normalizedVocabulary.length > 0 && (
-                          <div className="mb-2">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <BookOpen className="w-4 h-4 text-green-600 dark:text-green-400" />
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">New Vocabulary ({normalizedVocabulary.length}):</span>
-                            </div>
-                            <div className="flex flex-wrap gap-2 ml-6">
-                              {normalizedVocabulary.map((word, idx) => (
-                                <span key={idx} className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full">
-                                  {word}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Show a notice if vocabulary data is in old format */}
-                        {!normalizedVocabulary.length && activity.new_vocabulary &&
-                          typeof activity.new_vocabulary === 'string' &&
-                          (activity.new_vocabulary.includes('个新词汇') || activity.new_vocabulary.includes('个复习词汇')) && (
-                            <div className="mb-2">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <BookOpen className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                                <span className="text-sm font-medium text-amber-700 dark:text-amber-300">Vocabulary Summary:</span>
-                              </div>
-                              <div className="ml-6 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded">
-                                {activity.new_vocabulary}
-                                <span className="block text-xs mt-1 text-amber-500 dark:text-amber-400">
-                                  ℹ️ Legacy data format - specific words not recorded
-                                </span>
-                              </div>
-                            </div>
-                          )}
-
-                        {/* Display practice sentences if available */}
-                        {normalizedSentences.length > 0 && (
-                          <div className="mb-2">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Practice Sentences:</span>
-                            </div>
-                            <ul className="ml-6 space-y-1">
-                              {normalizedSentences.map((sentence, idx) => (
-                                <li key={idx} className="text-sm text-gray-600 dark:text-gray-300 italic">• {sentence}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {activity.notes && (
-                          <p className="text-gray-600 dark:text-gray-300 text-sm mt-2">{activity.notes}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
+        <ActivityList
+          activities={activities}
+          onReviewCards={() => setShowFlashcards(true)}
+          onLogActivity={() => setShowForm(true)}
+        />
 
         {/* Learning Streak Visualization */}
         {activities.length > 0 && (
@@ -615,7 +320,7 @@ export default function FrenchPage() {
           items={activities}
           onClose={() => setShowFlashcards(false)}
           title="French Learning History"
-          renderFront={(activity) => {
+          renderFront={(activity: FrenchActivity) => {
             const normalizedVocabulary = normalizeVocabulary(activity.new_vocabulary)
 
             return (
@@ -667,7 +372,7 @@ export default function FrenchPage() {
               </div>
             )
           }}
-          renderBack={(activity) => {
+          renderBack={(activity: FrenchActivity) => {
             const normalizedVocabulary = normalizeVocabulary(activity.new_vocabulary)
             const normalizedSentences = normalizeSentences(activity.practice_sentences)
 

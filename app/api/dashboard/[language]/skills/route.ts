@@ -7,7 +7,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getActiveSkillsData, TARGET_USER_ID } from '@/lib/db/queries';
+import { getActiveSkillsData } from '@/lib/db/queries';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 // Language mapping: route parameter -> language_code
 const LANGUAGE_CODE_MAP: Record<string, string> = {
@@ -30,8 +31,17 @@ export async function GET(
   { params }: { params: { language: string } }
 ) {
   try {
+    // Authenticate user
+    const userId = await getAuthenticatedUser(request);
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const language = params.language.toLowerCase();
-    const userId = TARGET_USER_ID;
 
     // Map language name to language_code
     const languageCode = LANGUAGE_CODE_MAP[language];

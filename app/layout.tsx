@@ -3,10 +3,11 @@ import { Inter } from 'next/font/google'
 import Navigation from '../components/Navigation'
 import { AuthProvider } from '../contexts/AuthContext'
 import Script from 'next/script'
+import type { Metadata, Viewport } from 'next'
 
 const inter = Inter({ subsets: ['latin'] })
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Chris's Learning Goal - Track Your Progress",
   description: "Chris's personalized learning tracker for books, languages, and educational progress. Monitor your learning journey and achieve your goals.",
   icons: {
@@ -23,7 +24,7 @@ export const metadata = {
   },
 }
 
-export const viewport = {
+export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
@@ -33,7 +34,7 @@ export const viewport = {
   ],
 }
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -44,23 +45,23 @@ export default function RootLayout({ children }) {
               function getThemeMode() {
                 return localStorage.getItem('theme-mode') || 'system';
               }
-              
+
               function getManualTheme() {
                 return localStorage.getItem('theme-manual') || 'light';
               }
-              
+
               function getSystemTheme() {
                 return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
               }
-              
+
               function isDarkHours() {
                 const hour = new Date().getHours();
                 return hour >= 18 || hour < 6;
               }
-              
+
               function calculateTheme() {
                 const mode = getThemeMode();
-                
+
                 switch (mode) {
                   case 'manual':
                     return getManualTheme();
@@ -72,7 +73,7 @@ export default function RootLayout({ children }) {
                     return getSystemTheme();
                 }
               }
-              
+
               const theme = calculateTheme();
               if (theme === 'dark') {
                 document.documentElement.classList.add('dark');

@@ -1,10 +1,24 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
+import { User, Session } from '@supabase/supabase-js'
 
-const AuthContext = createContext({})
+interface AuthContextType {
+  user: User | null
+  loading: boolean
+  syncing: boolean
+  error: string | null
+  signIn: (email: string, password: string) => Promise<any>
+  signUp: (email: string, password: string, metadata?: any) => Promise<any>
+  signOut: () => Promise<void>
+  refreshSession: () => Promise<Session | null>
+  updateUserMetadata: (metadata: any) => Promise<any>
+  clearError: () => void
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const useAuth = () => {
   const context = useContext(AuthContext)
@@ -14,15 +28,19 @@ export const useAuth = () => {
   return context
 }
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null)
+interface AuthProviderProps {
+  children: ReactNode
+}
+
+export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
-  const [error, setError] = useState(null)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const pathname = usePathname()
   const pathnameRef = useRef(pathname)
-  const sessionCheckInterval = useRef(null)
+  const sessionCheckInterval = useRef<NodeJS.Timeout | null>(null)
   const syncAttempts = useRef(0)
   const MAX_SYNC_ATTEMPTS = 3
 
@@ -32,9 +50,9 @@ export const AuthProvider = ({ children }) => {
   }, [pathname])
 
   // Sync user profile data from database
-  const syncUserProfile = useCallback(async (userId) => {
+  const syncUserProfile = useCallback(async (userId: string) => {
     if (!userId || syncAttempts.current >= MAX_SYNC_ATTEMPTS) return null
-    
+
     try {
       setSyncing(true)
       syncAttempts.current += 1
@@ -72,7 +90,7 @@ export const AuthProvider = ({ children }) => {
 
       syncAttempts.current = 0 // Reset on success
       return profile
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error syncing user profile:', err)
       setError(err.message)
       return null
@@ -86,14 +104,14 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data: { session }, error } = await supabase.auth.refreshSession()
       if (error) throw error
-      
+
       if (session?.user) {
         setUser(session.user)
         await syncUserProfile(session.user.id)
       }
-      
+
       return session
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error refreshing session:', err)
       setError(err.message)
       return null
@@ -103,16 +121,14 @@ export const AuthProvider = ({ children }) => {
   // Initialize session and set up listeners
   useEffect(() => {
     let mounted = true
-    const initStarted = sessionCheckInterval.current // Abuse existing ref or create new one? Better create new one.
-    // Actually, simple ref for "isMounted" is enough if we rely on subscription
-    
+
     console.log('[Auth] Setting up listener...')
 
     // 1. Set up listener - this usually fires immediately with current session from localStorage
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('[Auth] Event:', event)
-        
+
         if (!mounted) return
 
         const currentUser = session?.user ?? null
@@ -129,7 +145,7 @@ export const AuthProvider = ({ children }) => {
         if (event === 'SIGNED_OUT') {
           setUser(null)
           syncAttempts.current = 0
-          if (!pathnameRef.current?.startsWith('/embed')) {
+          if (pathnameRef.current && !pathnameRef.current.startsWith('/embed')) {
             router.push('/login')
           }
         }
@@ -161,7 +177,7 @@ export const AuthProvider = ({ children }) => {
     }, 5 * 60 * 1000)
 
     // Listen for storage events
-    const handleStorageChange = (e) => {
+    const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'supabase.auth.token' && mounted) {
         refreshSession()
       }
@@ -177,28 +193,28 @@ export const AuthProvider = ({ children }) => {
       }
       window.removeEventListener('storage', handleStorageChange)
     }
-  }, [router, syncUserProfile, refreshSession, user?.id]) // Removed 'loading' from dependency to avoid loop
+  }, [router, syncUserProfile, refreshSession, user?.id, loading])
 
   // Sign in with error handling and retry logic
-  const signIn = useCallback(async (email, password, retries = 2) => {
+  const signIn = useCallback(async (email: string, password: string, retries = 2) => {
     setError(null)
-    
+
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
-        
+
         if (error) throw error
-        
+
         // Sync profile after successful sign in
         if (data.user) {
           await syncUserProfile(data.user.id)
         }
-        
+
         return data
-      } catch (err) {
+      } catch (err: any) {
         if (attempt === retries) {
           setError(err.message)
           throw err
@@ -210,9 +226,9 @@ export const AuthProvider = ({ children }) => {
   }, [syncUserProfile])
 
   // Sign up with profile initialization
-  const signUp = useCallback(async (email, password, metadata = {}) => {
+  const signUp = useCallback(async (email: string, password: string, metadata = {}) => {
     setError(null)
-    
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -221,16 +237,16 @@ export const AuthProvider = ({ children }) => {
           data: metadata
         }
       })
-      
+
       if (error) throw error
-      
+
       // Initialize profile for new user
       if (data.user) {
         await syncUserProfile(data.user.id)
       }
-      
+
       return data
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message)
       throw err
     }
@@ -239,45 +255,45 @@ export const AuthProvider = ({ children }) => {
   // Sign out with cleanup
   const signOut = useCallback(async () => {
     setError(null)
-    
+
     try {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
-      
+
       // Clear local state
       setUser(null)
       syncAttempts.current = 0
-      
-    } catch (err) {
+
+    } catch (err: any) {
       setError(err.message)
       throw err
     }
   }, [])
 
   // Update user metadata
-  const updateUserMetadata = useCallback(async (metadata) => {
+  const updateUserMetadata = useCallback(async (metadata: any) => {
     setError(null)
-    
+
     try {
       const { data, error } = await supabase.auth.updateUser({
         data: metadata
       })
-      
+
       if (error) throw error
-      
+
       if (data.user) {
         setUser(data.user)
         await syncUserProfile(data.user.id)
       }
-      
+
       return data
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message)
       throw err
     }
   }, [syncUserProfile])
 
-  const value = {
+  const value: AuthContextType = {
     user,
     loading,
     syncing,

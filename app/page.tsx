@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import Link from 'next/link'
 import { BookOpen, Languages, TrendingUp, Target, Settings, Link2, Globe } from 'lucide-react'
 import ProtectedRoute from '../components/ProtectedRoute'

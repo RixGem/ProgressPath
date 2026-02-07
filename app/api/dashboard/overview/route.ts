@@ -11,10 +11,10 @@ import {
     getActivityBreakdown,
     getLanguageSummary,
     getTimeStats,
-    getVocabularyStats,
-    TARGET_USER_ID
+    getVocabularyStats
 } from '@/lib/db/queries';
 import { getXPStats } from '@/utils/xpCalculations';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,11 +23,18 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
     try {
+        // Authenticate user
+        const userId = await getAuthenticatedUser(request);
+
+        if (!userId) {
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
         const searchParams = request.nextUrl.searchParams;
         const period = (searchParams.get('period') as TimePeriod) || 'weekly';
-
-        // Use fixed TARGET_USER_ID
-        const userId = TARGET_USER_ID;
 
         // Fetch all data in parallel
         const [dailyXP, streakInfo, activities, languages, timeStats, vocabStats] = await Promise.all([

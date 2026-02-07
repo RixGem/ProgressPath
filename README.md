@@ -46,6 +46,21 @@ A modern Next.js application to track your learning progress across books and la
 - **Session Notes**: Add detailed notes for each learning session
 - **Dark mode support** for late-night study sessions
 
+### 🇩🇪 German Learning Dashboard
+- **Dedicated German Hub**: Specialized tracking for German language learning
+- **Activity Logging**: Log vocabulary, grammar, and practice sessions
+- **Progress Tracking**: Monitor your German vocabulary growth and study time
+- **Dual-Language Support**: Seamlessly switch between French and German contexts
+- **Integrated Analytics**: View German-specific charts and statistics
+
+### 🏆 XP & Leveling System
+- **Gamified Progress**: Earn XP for every book read and lesson completed
+- **Leveling**: Watch your level grow as you accumulate knowledge (Level 1 → ∞)
+- **Visual Charts**: Interactive graphs showing XP trends over time (Daily/Weekly/Monthly)
+- **Streaks**: Maintain daily activity streaks to boost motivation
+- **Goals**: Set and track daily/weekly XP goals to stay consistent
+- **Leaderboards**: (Coming Soon) Compete with friends
+
 ### 🏠 Homepage Experience
 - Personalized greeting: "Hey Chris! Ready to Level Up?"
 - **Daily rotating inspirational quote** (changes every day)
@@ -735,6 +750,10 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Changelog
 
+- **v2.3.0**: Added XP System & German Support
+  - New gamification engine with XP, Levels, and Streaks
+  - Complete German language dashboard support
+  - Enhanced database schema with auto-aggregating triggers
 - **v2.2.0**: Environment variable naming compatibility
   - Added support for multiple naming conventions (standard and legacy)
   - Intelligent fallback system for environment variables

@@ -5,17 +5,26 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import type { ChartDataPoint, TimePeriod } from '@/types/xpChart';
-import { getDailyXP, TARGET_USER_ID } from '@/lib/db/queries';
+import { getDailyXP } from '@/lib/db/queries';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 /**
  * GET handler for XP data
  */
 export async function GET(request: NextRequest) {
   try {
+    // Authenticate user
+    const userId = await getAuthenticatedUser(request);
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     // Extract query parameters
     const searchParams = request.nextUrl.searchParams;
-    // Always use TARGET_USER_ID to match database records
-    const userId = TARGET_USER_ID;
     const period = (searchParams.get('period') as TimePeriod) || 'weekly';
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');

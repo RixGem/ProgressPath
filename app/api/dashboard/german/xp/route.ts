@@ -5,17 +5,26 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import type { TimePeriod } from '@/types/xpChart';
-import { getDailyXP, getStreakInfo, getActivityBreakdown, getTimeStats, getVocabularyStats, TARGET_USER_ID } from '@/lib/db/queries';
+import { getDailyXP, getStreakInfo, getActivityBreakdown, getTimeStats, getVocabularyStats } from '@/lib/db/queries';
 import { getXPStats } from '@/utils/xpCalculations';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 /**
  * GET handler for German XP data
  */
 export async function GET(request: NextRequest) {
   try {
+    // Authenticate user
+    const userId = await getAuthenticatedUser(request);
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
-    // Always use TARGET_USER_ID to match database records
-    const userId = TARGET_USER_ID;
     const period = (searchParams.get('period') as TimePeriod) || 'weekly';
     const languageCode = 'de'; // Use language_code instead of language name
 

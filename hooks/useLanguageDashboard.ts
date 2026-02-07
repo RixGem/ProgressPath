@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export interface LanguageDashboardData {
   // Status Cards Data
@@ -68,16 +69,27 @@ export function useLanguageDashboard(language: string): UseLanguageDashboardResu
     setError(null);
 
     try {
+      // Get current session for auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: HeadersInit = {};
+
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
       // Fetch data from all new API endpoints in parallel
       const [virtualLevelRes, completionRes, skillsRes, heatmapRes, xpRes] = await Promise.all([
-        fetch(`/api/dashboard/${language}/virtual-level`),
-        fetch(`/api/dashboard/${language}/completion`),
-        fetch(`/api/dashboard/${language}/skills`),
-        fetch(`/api/dashboard/${language}/heatmap?days=30`),
-        fetch(`/api/dashboard/${language}/xp?days=30`)
+        fetch(`/api/dashboard/${language}/virtual-level`, { headers }),
+        fetch(`/api/dashboard/${language}/completion`, { headers }),
+        fetch(`/api/dashboard/${language}/skills`, { headers }),
+        fetch(`/api/dashboard/${language}/heatmap?days=30`, { headers }),
+        fetch(`/api/dashboard/${language}/xp?days=30`, { headers })
       ]);
 
       if (!virtualLevelRes.ok || !completionRes.ok || !skillsRes.ok || !heatmapRes.ok || !xpRes.ok) {
+        if (virtualLevelRes.status === 401) {
+          throw new Error('Unauthorized: Please sign in');
+        }
         throw new Error('Failed to fetch dashboard data');
       }
 

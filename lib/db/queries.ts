@@ -10,8 +10,7 @@ import type { DashboardData, Activity, TimeStats, StreakData, Language, Language
 // Use server client that bypasses RLS
 const supabase = supabaseServer;
 
-// Fixed user ID as per requirements
-export const TARGET_USER_ID = 'f484bfe8-2771-4e0f-b765-830fbdb3c74e';
+// TARGET_USER_ID removed - Use proper authentication instead
 
 /**
  * Interface for completion rate data

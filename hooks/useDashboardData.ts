@@ -5,6 +5,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 import type { DashboardData, Language } from '@/types/dashboard';
 import type { TimePeriod } from '@/types/xpChart';
 
@@ -43,9 +44,17 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
       setLoading(true);
       setError(null);
 
+      // Get current session for auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: HeadersInit = {};
+
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
       // Build query parameters
       const params = new URLSearchParams({
-        userId,
+        userId, // API will prefer Auth token over this, but kept for compatibility
         period: currentPeriod
       });
 
@@ -61,9 +70,14 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
         endpoint = '/api/dashboard/german/xp';
       }
 
-      const response = await fetch(`${endpoint}?${params.toString()}`);
+      const response = await fetch(`${endpoint}?${params.toString()}`, {
+        headers
+      });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized: Please sign in to view dashboard data');
+        }
         throw new Error(`Failed to fetch dashboard data: ${response.statusText}`);
       }
 

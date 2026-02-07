@@ -8,7 +8,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getActivityHeatmap, TARGET_USER_ID } from '@/lib/db/queries';
+import { getActivityHeatmap } from '@/lib/db/queries';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 // Language mapping: route parameter -> language_code
 const LANGUAGE_CODE_MAP: Record<string, string> = {
@@ -31,9 +32,18 @@ export async function GET(
   { params }: { params: { language: string } }
 ) {
   try {
+    // Authenticate user
+    const userId = await getAuthenticatedUser(request);
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const language = params.language.toLowerCase();
-    const userId = TARGET_USER_ID;
 
     // Parse days parameter (default to 30)
     const daysParam = searchParams.get('days');
